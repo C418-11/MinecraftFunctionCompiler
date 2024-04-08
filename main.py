@@ -19,8 +19,12 @@ SB_ARGS = "Args"
 SB_TEMP = "Temp"
 
 
+SAVE_PATH = "./.output/"
+
+
 def file_path(namespace: str, filename: str):
-    return os.path.join(namespace.split(":", 1)[1], filename)
+    base_path = os.path.join(namespace.split(":", 1)[1], filename)
+    return os.path.join(SAVE_PATH, base_path)
 
 
 def generate_code(node, namespace: str):
