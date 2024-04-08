@@ -3,7 +3,7 @@ import json
 import os
 from itertools import zip_longest
 
-with open("add.py", mode='r') as _:
+with open("test/add.py", mode='r') as _:
     tree = ast.parse(_.read())
 
 
