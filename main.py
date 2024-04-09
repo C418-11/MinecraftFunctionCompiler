@@ -45,13 +45,21 @@ class DefaultKwType(KwType, ABCDefaultParameterType):
 
 
 class UnnecessaryParameter:
-    ...
+    __instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    def __repr__(self):
+        return "<<UnnecessaryParameter>>"
 
 
 func_args: dict[str, OrderedDict[str, ArgType | DefaultArgType]] = {
     "python:built-in\\print": OrderedDict([
-        ('*', DefaultArgType('*', UnnecessaryParameter)),
-        *[(('*' + str(i)), DefaultArgType('*' + str(i), UnnecessaryParameter)) for i in range(1, 10)]
+        ('*', DefaultArgType('*', UnnecessaryParameter())),
+        *[(('*' + str(i)), DefaultArgType('*' + str(i), UnnecessaryParameter())) for i in range(1, 10)]
     ])
 }
 
@@ -255,4 +263,4 @@ def generate_code(node, namespace: str):
 
 print(ast.dump(tree, indent=4))
 print(generate_code(tree, "source_code:add"))
-print(func_args)
+print(f"[DEBUG] {func_args=}")
