@@ -55,18 +55,52 @@ func_args: dict[str, OrderedDict[str, ArgType | DefaultArgType]] = {
     ])
 }
 
+
+class Flags:
+    TRUE = "True"
+    FALSE = "False"
+
+    DEBUG = "DEBUG"
+
+
 DECIMAL_PRECISION: int = 3
 
-SB_ARGS: str = "Args"
-SB_TEMP: str = "Temp"
+
+SB_ARGS: str = "Python.Args"
+SB_TEMP: str = "Python.Temp"
+SB_FLAGS: str = "Python.Flags"
+
+
+ENABLE_DEBUGGING: bool = True
 
 
 SAVE_PATH = "./.output/"
+# SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks\函数测试\data\source_code\functions"
 
 
 def file_path(namespace: str, filename: str):
     base_path = os.path.join(namespace.split(":", 1)[1], filename)
     return os.path.join(SAVE_PATH, base_path)
+
+
+def IF_FLAG(flag: str, cmd: str):
+    return f"execute if score {flag} {SB_FLAGS} = {Flags.TRUE} {SB_FLAGS} run {cmd}\n"
+
+
+def DEBUG_OBJECTIVE(objective: str, name: str):
+    json_txt = json.dumps({
+        "text": "",
+        "extra": [
+            {"text": "[DEBUG]", "color": "gray", "italic": True},
+            {"text": " "},
+            {"text": objective, "color": "dark_purple"},
+            {"text": " | ", "bold": True, "color": "gold"},
+            {"text": name, "color": "dark_aqua"},
+            {"text": " | ", "bold": True, "color": "gold"},
+            {"score": {"name": name, "objective": objective}, "color": "green"},
+        ]
+    })
+    return IF_FLAG(Flags.DEBUG, f"tellraw @a {json_txt}\n")
 
 
 def generate_code(node, namespace: str):
@@ -78,21 +112,6 @@ def generate_code(node, namespace: str):
             for statement in node.body:
                 c = generate_code(statement, os.path.join(namespace, "module"))
                 f.write(c)
-
-        # with open(file_path(namespace, "init.mcfunction"), mode='w') as f:
-        #     f.write(f"scoreboard objectives add {SB_ARGS} dummy\n")
-        #     f.write(f"scoreboard objectives add {SB_TEMP} dummy\n")
-        #
-        #     for arg, value in define_args.items():
-        #         if type(value) not in {int, float}:
-        #             if not (type(value) is str and value.isdigit()):
-        #                 raise Exception("无法解析的默认值")
-        #             value = int(value)
-        #         if type(value) is float:
-        #             value = value * (10 ** DECIMAL_PRECISION)
-        #
-        #         # Minecraft的积分版只能使用整数
-        #         f.write(f"scoreboard players set {arg} {SB_ARGS} {value}\n")
 
         return ''
 
@@ -145,16 +164,20 @@ def generate_code(node, namespace: str):
         left = generate_code(node.left, namespace)
         right = generate_code(node.right, namespace)
 
-        if isinstance(node.op, ast.Add):
-            cmd = (
-                f"scoreboard players operation {namespace}.*BinOp {SB_TEMP} = {namespace}.{left} {SB_ARGS}\n"
-                f"scoreboard players operation {namespace}.*BinOp {SB_TEMP} += {namespace}.{right} {SB_ARGS}\n"
-                f"scoreboard players operation {namespace}.?Result {SB_TEMP} = {namespace}.*BinOp {SB_TEMP}\n"
-                f"scoreboard players reset {namespace}.*BinOp\n"
-            )
-            return cmd
+        command = f"scoreboard players operation {namespace}.*BinOp {SB_TEMP} = {namespace}.{left} {SB_ARGS}\n"
 
-        raise Exception(f"无法解析的运算符 {node.op}")
+        if isinstance(node.op, ast.Add):
+            command += f"scoreboard players operation {namespace}.*BinOp {SB_TEMP} += {namespace}.{right} {SB_ARGS}\n"
+        else:
+            raise Exception(f"无法解析的运算符 {node.op}")
+
+        command += f"scoreboard players operation {namespace}.?Result {SB_TEMP} = {namespace}.*BinOp {SB_TEMP}\n"
+
+        if ENABLE_DEBUGGING:
+            command += DEBUG_OBJECTIVE(SB_TEMP, f"{namespace}.*BinOp")
+        command += f"scoreboard players reset {namespace}.*BinOp {SB_TEMP}\n"
+
+        return command
 
     if isinstance(node, ast.Expr):
         return generate_code(node.value, namespace)
@@ -194,7 +217,10 @@ def generate_code(node, namespace: str):
                     continue
                 value = ast.Constant(value=this_func_args[name].default)
 
+            if ENABLE_DEBUGGING:
+                del_args += DEBUG_OBJECTIVE(SB_ARGS, f"{func}.{name}")
             del_args += f"scoreboard players reset {func}.{name} {SB_ARGS}\n"
+
             if isinstance(value, ast.Call):
                 # 拿到value的namespace
                 commands += generate_code(value, namespace)
@@ -207,6 +233,8 @@ def generate_code(node, namespace: str):
                     f"= "  # 运算符
                     f"{func_result}.?Result {SB_TEMP}\n"  # From
                 )
+                if ENABLE_DEBUGGING:
+                    del_args += DEBUG_OBJECTIVE(SB_ARGS, f"{func_result}.?Result")
                 del_args += f"scoreboard players reset {func_result}.?Result {SB_TEMP}\n"
 
             elif isinstance(value, ast.Constant):
