@@ -1,4 +1,5 @@
-tellraw @a { "text": "" , "extra": [ { "text": "[Python]", "clickEvent": { "action": "open_url", "value": "https://github.com/C418-11/MinecraftFunctionCompiler" }}, { "text": " 正在清空数据..." }], "color": "gold", "hoverEvent": { "action": "show_text", "value": "Made By: C418____11" } }
-scoreboard objectives remove Args
-scoreboard objectives remove Temp
-tellraw @a { "text": "" , "extra": [ { "text": "[Python]", "clickEvent": { "action": "open_url", "value": "https://github.com/C418-11/MinecraftFunctionCompiler" }}, { "text": " 清空完成!" }], "color": "gold", "hoverEvent": { "action": "show_text", "value": "Made By: C418____11" } }
+tellraw @a { "text": "" , "extra": [ ${RAWJSON:Prefix}, { "text": " ${CHAT:ClearingData}" }], "color": "gold", ${RAWJSON.HoverEvent.Author} }
+scoreboard objectives remove ${SB:Args}
+scoreboard objectives remove ${SB:Temp}
+scoreboard objectives remove ${SB:Flags}
+tellraw @a { "text": "" , "extra": [ ${RAWJSON:Prefix}, { "text": " ${CHAT:DataClearingComplete}" }], "color": "gold", ${RAWJSON.HoverEvent.Author} }
