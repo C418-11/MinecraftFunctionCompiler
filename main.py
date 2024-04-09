@@ -1,22 +1,64 @@
 import ast
 import json
 import os
+from abc import ABC
 from itertools import zip_longest
+from collections import OrderedDict
+
+import warnings
 
 with open("test/add.py", mode='r') as _:
     tree = ast.parse(_.read())
 
 
-func_args = {
-    "python:built-in\\print": ['*', *['*' + str(i) for i in range(1, 10)]]
+class ABCParameterType(ABC):
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.name=})"
+
+
+class ABCDefaultParameterType(ABCParameterType):
+    def __init__(self, name, default):
+        super().__init__(name)
+        self.default = default
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.name=}, {self.default=})"
+
+
+class ArgType(ABCParameterType):
+    pass
+
+
+class DefaultArgType(ArgType, ABCDefaultParameterType):
+    pass
+
+
+class KwType(ABCParameterType):
+    pass
+
+
+class DefaultKwType(KwType, ABCDefaultParameterType):
+    pass
+
+
+class UnnecessaryParameter:
+    ...
+
+
+func_args: dict[str, OrderedDict[str, ArgType | DefaultArgType]] = {
+    "python:built-in\\print": OrderedDict([
+        ('*', DefaultArgType('*', UnnecessaryParameter)),
+        *[(('*' + str(i)), DefaultArgType('*' + str(i), UnnecessaryParameter)) for i in range(1, 10)]
+    ])
 }
 
-define_args = {}
+DECIMAL_PRECISION: int = 3
 
-DECIMAL_PRECISION = 3
-
-SB_ARGS = "Args"
-SB_TEMP = "Temp"
+SB_ARGS: str = "Args"
+SB_TEMP: str = "Temp"
 
 
 SAVE_PATH = "./.output/"
@@ -65,16 +107,32 @@ def generate_code(node, namespace: str):
 
     if isinstance(node, ast.arguments):
         args = [arg.arg for arg in node.args]
-        func_args[namespace] = args
 
-        for name, default in zip_longest(args[::-1], node.defaults, fillvalue=ast.Constant(value=0)):
+        if namespace in func_args:
+            warnings.warn(
+                f"函数命名空间 {namespace} 已经存在, 可能覆盖之前的定义",
+                UserWarning,
+                stacklevel=0
+            )
 
-            if isinstance(default, ast.Constant):
+        args_dict = OrderedDict()
+
+        # 反转顺序以匹配默认值
+        for name, default in zip_longest(reversed(args), reversed(node.defaults), fillvalue=None):
+
+            if default is None:
+                args_dict[name] = ArgType(name)
+            elif isinstance(default, ast.Constant):
                 default_value = default.value
+                args_dict[name] = DefaultArgType(name, default_value)
             else:
                 raise Exception("无法解析的默认值")
 
-            define_args[f"{namespace}.{name}"] = default_value
+        # 将最终顺序反转回来
+        args_dict = OrderedDict([(k, v) for k, v in reversed(args_dict.items())])
+
+        func_args[namespace] = args_dict
+
         return ''
 
     if isinstance(node, ast.Name):
@@ -120,7 +178,22 @@ def generate_code(node, namespace: str):
         except KeyError:
             raise Exception(f"未注册过的函数: {func}")
 
-        for name, value in zip(this_func_args, node.args):
+        for name, value in zip_longest(this_func_args, node.args, fillvalue=None):
+            if name is None:
+                json_value = ast.dump(value)
+                raise SyntaxError(f"函数 {func} 在调用时传入了额外的值 {json_value}")
+
+            # 如果参数未提供值，且不是默认值，则报错
+            if value is None:
+                if not isinstance(this_func_args[name], DefaultArgType):
+                    raise SyntaxError(f"函数 {func} 的参数 {name} 未提供值")
+
+                default_value = this_func_args[name].default
+
+                if default_value is UnnecessaryParameter:
+                    continue
+                value = ast.Constant(value=this_func_args[name].default)
+
             del_args += f"scoreboard players reset {func}.{name} {SB_ARGS}\n"
             if isinstance(value, ast.Call):
                 # 拿到value的namespace
@@ -154,4 +227,4 @@ def generate_code(node, namespace: str):
 
 print(ast.dump(tree, indent=4))
 print(generate_code(tree, "source_code:add"))
-print(define_args)
+print(func_args)
