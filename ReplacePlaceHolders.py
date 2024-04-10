@@ -4,9 +4,11 @@
 __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
-import json
+
 import re
 import os
+
+from Constant import PLACEHOLDER_MAP
 
 
 def replace_placeholders(code, data):
@@ -58,79 +60,11 @@ def get_files(base_path: str, root_dir: str):
             yield os.path.normpath(os.path.join(root, file)), relative_path, file
 
 
-SAVE_PATH = r"\.output"
+SAVE_PATH = r".\.output"
 # SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks"
 
 
-ScoreBoards = {
-    "SB:Args": "Python.Args",
-    "SB:Temp": "Python.Temp",
-    "SB:Flags": "Python.Flags",
-    "SB:Input":  "Python.Input",
-}
-
-
 def main():
-
-    data = {
-        "BuiltIn:print": "打印: ",
-        "BuiltIn:input.TIP": "输入: ",
-
-        "RAWJSON.BuiltIn:input": json.dumps({
-            "text": "[点击输入]",
-
-            "clickEvent": {
-                "action": "suggest_command", "value": f"/trigger {ScoreBoards["SB:Input"]} set "
-            },
-            "hoverEvent": {
-                "action": "show_text", "value": "[点击自动补全指令]"
-            },
-
-            "color": "gold",
-
-            "bold": False,
-            "italic": False,
-            "underlined": False,
-            "strikethrough": False,
-            "obfuscated": False,
-
-            "font": "minecraft:default",
-        }),
-
-        "CHAT:Initializing": "正在初始化...",
-        "CHAT:InitializationComplete": "初始化完成!",
-
-        "CHAT:ClearingData": "正在清空数据...",
-        "CHAT:DataClearingComplete": "数据清空完成!",
-
-        "RAWJSON:Prefix": json.dumps({
-            "text": "[Python]",
-
-            "clickEvent": {
-                "action": "open_url", "value": "https://github.com/C418-11/MinecraftFunctionCompiler"
-            },
-            "hoverEvent": {
-                "action": "show_text", "value": "GitHub"
-            },
-
-            "color": "gold",
-
-            "bold": False,
-            "italic": False,
-            "underlined": False,
-            "strikethrough": False,
-            "obfuscated": False,
-
-            "font": "minecraft:default",
-        }),
-
-        "RAWJSON.HoverEvent.Author": json.dumps({
-            "hoverEvent": {"action": "show_text", "value": "Made By: C418____11"}
-        })[1:-1],
-    }
-
-    data.update(ScoreBoards)
-
     file_extensions = [".mcfunction", ".mcmeta"]
 
     for file_path, relative_path, file in get_files(r"D:\source_code\python\MinecraftFunctionCompiler", r".\Python"):
@@ -145,12 +79,12 @@ def main():
         ext = os.path.splitext(file)[1]
         if ext in file_extensions:
             print("Processing", file_path)
-            new_code = replace_placeholders(code, data)
+            new_code = replace_placeholders(code, PLACEHOLDER_MAP)
         else:
             print("No Processing", file_path)
             new_code = code
 
-        print("Saving", file_path)
+        print("Saving", file_path, "To", os.path.join(SAVE_PATH, relative_path, file))
 
         os.makedirs(os.path.join(SAVE_PATH, relative_path), exist_ok=True)
         with open(os.path.join(SAVE_PATH, relative_path, file), encoding="UTF-8", mode='w') as f:

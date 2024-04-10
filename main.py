@@ -4,6 +4,8 @@ import os
 from abc import ABC
 from itertools import zip_longest
 from collections import OrderedDict
+from Constant import Flags
+from Constant import ScoreBoards
 
 import warnings
 
@@ -70,22 +72,10 @@ func_args: dict[str, OrderedDict[str, ArgType | DefaultArgType]] = {
     "python:built-in\\input": print_args,
 }
 
-
-class Flags:
-    TRUE = "True"
-    FALSE = "False"
-
-    DEBUG = "DEBUG"
-
-
-DECIMAL_PRECISION: int = 3
-
-
-SB_ARGS: str = "Python.Args"
-SB_TEMP: str = "Python.Temp"
-SB_FLAGS: str = "Python.Flags"
-SB_INPUT: str = "Python.Input"
-
+SB_ARGS: str = ScoreBoards.Args
+SB_TEMP: str = ScoreBoards.Temp
+SB_FLAGS: str = ScoreBoards.Flags
+SB_INPUT: str = ScoreBoards.Input
 
 ENABLE_DEBUGGING: bool = True
 
