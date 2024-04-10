@@ -56,11 +56,18 @@ class UnnecessaryParameter:
         return "<<UnnecessaryParameter>>"
 
 
+print_args = OrderedDict([
+    ('*', DefaultArgType('*', UnnecessaryParameter())),
+    *[(('*' + str(i)), DefaultArgType('*' + str(i), UnnecessaryParameter())) for i in range(1, 10)]
+])
+
+
 func_args: dict[str, OrderedDict[str, ArgType | DefaultArgType]] = {
-    "python:built-in\\print": OrderedDict([
-        ('*', DefaultArgType('*', UnnecessaryParameter())),
-        *[(('*' + str(i)), DefaultArgType('*' + str(i), UnnecessaryParameter())) for i in range(1, 10)]
-    ])
+    "python:built-in\\int":  OrderedDict([
+        ('x', DefaultArgType('x', UnnecessaryParameter())),
+    ]),
+    "python:built-in\\print": print_args,
+    "python:built-in\\input": print_args,
 }
 
 
@@ -77,6 +84,7 @@ DECIMAL_PRECISION: int = 3
 SB_ARGS: str = "Python.Args"
 SB_TEMP: str = "Python.Temp"
 SB_FLAGS: str = "Python.Flags"
+SB_INPUT: str = "Python.Input"
 
 
 ENABLE_DEBUGGING: bool = True

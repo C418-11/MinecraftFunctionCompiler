@@ -2,4 +2,5 @@ tellraw @a { "text": "" , "extra": [ ${RAWJSON:Prefix}, { "text": " ${CHAT:Clear
 scoreboard objectives remove ${SB:Args}
 scoreboard objectives remove ${SB:Temp}
 scoreboard objectives remove ${SB:Flags}
+scoreboard objectives remove ${SB:Input}
 tellraw @a { "text": "" , "extra": [ ${RAWJSON:Prefix}, { "text": " ${CHAT:DataClearingComplete}" }], "color": "gold", ${RAWJSON.HoverEvent.Author} }

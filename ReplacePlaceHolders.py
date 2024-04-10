@@ -62,13 +62,40 @@ SAVE_PATH = r"\.output"
 # SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks"
 
 
-def main():
-    data = {
-        "SB:Args": "Python.Args",
-        "SB:Temp": "Python.Temp",
-        "SB:Flags": "Python.Flags",
+ScoreBoards = {
+    "SB:Args": "Python.Args",
+    "SB:Temp": "Python.Temp",
+    "SB:Flags": "Python.Flags",
+    "SB:Input":  "Python.Input",
+}
 
+
+def main():
+
+    data = {
         "BuiltIn:print": "打印: ",
+        "BuiltIn:input.TIP": "输入: ",
+
+        "RAWJSON.BuiltIn:input": json.dumps({
+            "text": "[点击输入]",
+
+            "clickEvent": {
+                "action": "suggest_command", "value": f"/trigger {ScoreBoards["SB:Input"]} set "
+            },
+            "hoverEvent": {
+                "action": "show_text", "value": "[点击自动补全指令]"
+            },
+
+            "color": "gold",
+
+            "bold": False,
+            "italic": False,
+            "underlined": False,
+            "strikethrough": False,
+            "obfuscated": False,
+
+            "font": "minecraft:default",
+        }),
 
         "CHAT:Initializing": "正在初始化...",
         "CHAT:InitializationComplete": "初始化完成!",
@@ -101,6 +128,8 @@ def main():
             "hoverEvent": {"action": "show_text", "value": "Made By: C418____11"}
         })[1:-1],
     }
+
+    data.update(ScoreBoards)
 
     file_extensions = [".mcfunction", ".mcmeta"]
 
