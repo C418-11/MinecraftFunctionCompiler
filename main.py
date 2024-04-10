@@ -221,7 +221,7 @@ def generate_code(node, namespace: str):
 
                 default_value = this_func_args[name].default
 
-                if default_value is UnnecessaryParameter:
+                if isinstance(default_value, UnnecessaryParameter):
                     continue
                 value = ast.Constant(value=this_func_args[name].default)
 
