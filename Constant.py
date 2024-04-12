@@ -15,6 +15,7 @@ class ScoreBoards:
     Temp = "Python.Temp"
     Flags = "Python.Flags"
     Input = "Python.Input"
+    Vars = "Python.Vars"
 
 
 class RawJsons:
@@ -57,6 +58,7 @@ SCOREBOARDS_PLACEHOLDER_MAP = {
     "SB:Temp": ScoreBoards.Temp,
     "SB:Flags": ScoreBoards.Flags,
     "SB:Input": ScoreBoards.Input,
+    "SB:Vars": ScoreBoards.Vars,
 }
 
 
