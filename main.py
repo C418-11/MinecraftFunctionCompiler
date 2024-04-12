@@ -85,9 +85,11 @@ ENABLE_DEBUGGING: bool = True
 SAVE_PATH = "./.output/"
 # SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks\函数测试\data\source_code\functions"
 
+ResultExt = ".?Result"
 
-def file_path(namespace: str, filename: str):
-    base_path = os.path.join(namespace.split(":", 1)[1], filename)
+
+def namespace_path(namespace: str, path: str):
+    base_path = os.path.join(namespace.split(":", 1)[1], path)
     return os.path.join(SAVE_PATH, base_path)
 
 
@@ -96,6 +98,18 @@ def IF_FLAG(flag: str, cmd: str):
     行尾 **没有** 换行符
     """
     return f"execute if score {flag} {SB_FLAGS} = {Flags.TRUE} {SB_FLAGS} run {cmd}"
+
+
+class SBCheckType:
+    IF = "if"
+    UNLESS = "unless"
+
+
+def CHECK_SB(t: str, a_name: str, a_objective: str, b_name: str, b_objective: str, cmd: str):
+    """
+    行尾 **没有** 换行符
+    """
+    return f"execute {t} score {a_name} {a_objective} = {b_name} {b_objective} run {cmd}"
 
 
 def DEBUG_OBJECTIVE(
@@ -160,7 +174,7 @@ def generate_name_node(node, namespace, generate_type):
     elif generate_type == NameNodeGenType.SB:
         return (
             f"scoreboard players operation "
-            f"{namespace}.?Result {SB_TEMP} "
+            f"{namespace}{ResultExt} {SB_TEMP} "
             f"= {namespace}.{node.id} {SB_VARS}\n"
         )
     else:
@@ -170,14 +184,24 @@ def generate_name_node(node, namespace, generate_type):
 class DebugTip:
     Reset = {"text": "重置: ", "color": "gold", "bold": True}
     Set = {"text": "设置: ", "color": "gold", "bold": True}
+    Calc = {"text": "计算: ", "color": "gold", "bold": True}
+
+
+Uid = 9
+
+
+def newUid():
+    global Uid
+    Uid += 1
+    return hex(Uid)[2:]
 
 
 def generate_code(node, namespace: str):
     namespace = os.path.normpath(namespace)
-    os.makedirs(file_path(namespace, ''), exist_ok=True)
+    os.makedirs(namespace_path(namespace, ''), exist_ok=True)
 
     if isinstance(node, ast.Module):
-        with open(file_path(namespace, "module.mcfunction"), mode='w') as f:
+        with open(namespace_path(namespace, "module.mcfunction"), mode='w') as f:
             for statement in node.body:
                 c = generate_code(statement, os.path.join(namespace, "module"))
                 f.write(c)
@@ -185,13 +209,67 @@ def generate_code(node, namespace: str):
         return ''
 
     if isinstance(node, ast.FunctionDef):
-        with open(file_path(namespace, f"{node.name}.mcfunction"), mode='w') as f:
+        with open(namespace_path(namespace, f"{node.name}.mcfunction"), mode='w') as f:
             args = generate_code(node.args, os.path.join(namespace, node.name))
             f.write(args)
             for statement in node.body:
                 body = generate_code(statement, os.path.join(namespace, node.name))
                 f.write(body)
         return ''
+
+    if isinstance(node, ast.If):
+        block_uid = newUid()
+
+        base_namespace = f"{namespace}\\.if"
+        base_path = namespace_path(base_namespace, '')
+        os.makedirs(base_path, exist_ok=True)
+
+        with open(os.path.join(base_path, f"{block_uid}.mcfunction"), mode='w') as f:
+            f.write('tellraw @a {"text": "进入True分支"}\n')
+            for statement in node.body:
+                body = generate_code(statement, namespace)
+                f.write(body)
+        with open(os.path.join(base_path, f"{block_uid}-else.mcfunction"), mode='w') as f:
+            f.write('tellraw @a {"text": "进入False分支"}\n')
+            for statement in node.orelse:
+                body = generate_code(statement, namespace)
+                f.write(body)
+
+        command = []
+        del_temp = ''
+        func_path = f"{base_namespace}\\{block_uid}".replace('\\', '/')
+
+        if isinstance(node.test, ast.Constant):
+            if node.test.value:
+                test_name, test_objective = Flags.TRUE, SB_FLAGS
+            else:
+
+                test_name, test_objective = Flags.FALSE, SB_FLAGS
+        elif isinstance(node.test, ast.Name):
+            command.append(generate_name_node(node.test, namespace, NameNodeGenType.SB)[:-1])  # 去除换行符
+            if ENABLE_DEBUGGING:
+                command.append(DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{ResultExt}"))
+            del_temp += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+            test_name, test_objective = f"{namespace}{ResultExt}", SB_TEMP
+        else:
+            raise Exception("无法解析的测试")
+
+        command.append(CHECK_SB(
+            SBCheckType.IF,
+            test_name, test_objective,
+            Flags.TRUE, SB_FLAGS,
+            f"function {func_path}"
+        ))
+        command.append(CHECK_SB(
+            SBCheckType.UNLESS,
+            test_name, test_objective,
+            Flags.TRUE, SB_FLAGS,
+            f"function {func_path}-else"
+        ))
+
+        cmd = '\n'.join(command) + '\n' + del_temp
+
+        return cmd
 
     if isinstance(node, ast.arguments):
         args = [arg.arg for arg in node.args]
@@ -238,15 +316,18 @@ def generate_code(node, namespace: str):
         return command
 
     if isinstance(node, ast.Name):
-        warnings.warn(
-            f"不稳定的API Name 节点解析请使用 generate_name_node",
-            UserWarning,
-            stacklevel=2
-        )
         return f"{node.id}"
 
     if isinstance(node, ast.Return):
-        return generate_code(node.value, namespace)
+        command = ''
+        if isinstance(node.value, ast.Name):
+            command += generate_name_node(node.value, namespace, NameNodeGenType.SB)
+            if ENABLE_DEBUGGING:
+                command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
+        else:
+            command += generate_code(node.value, namespace)
+
+        return command
 
     if isinstance(node, ast.BinOp):
         left = generate_code(node.left, namespace)
@@ -259,10 +340,10 @@ def generate_code(node, namespace: str):
         else:
             raise Exception(f"无法解析的运算符 {node.op}")
 
-        command += f"scoreboard players operation {namespace}.?Result {SB_TEMP} = {namespace}.*BinOp {SB_TEMP}\n"
+        command += f"scoreboard players operation {namespace}{ResultExt} {SB_TEMP} = {namespace}.*BinOp {SB_TEMP}\n"
 
         if ENABLE_DEBUGGING:
-            command += DEBUG_OBJECTIVE(DebugTip.Set, objective=SB_TEMP, name=f"{namespace}.?Result")
+            command += DEBUG_OBJECTIVE(DebugTip.Calc, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
             command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}.*BinOp")
         command += f"scoreboard players reset {namespace}.*BinOp {SB_TEMP}\n"
 
@@ -272,14 +353,22 @@ def generate_code(node, namespace: str):
         return generate_code(node.value, namespace)
 
     if isinstance(node, ast.Constant):
+        value = node.value
+
+        if type(value) is bool:
+            value = 1 if value else 0
+
+        if not isinstance(node.value, int):
+            raise Exception(f"无法解析的常量 {node.value}")
+
         command = (
             f"scoreboard players set "
-            f"{namespace}.?Result {SB_TEMP} "
-            f"{node.value}\n"
+            f"{namespace}{ResultExt} {SB_TEMP} "
+            f"{value}\n"
         )
 
         if ENABLE_DEBUGGING:
-            command += DEBUG_OBJECTIVE(DebugTip.Set, objective=SB_TEMP, name=f"{namespace}.?Result")
+            command += DEBUG_OBJECTIVE(DebugTip.Set, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
 
         return command
 
@@ -296,17 +385,17 @@ def generate_code(node, namespace: str):
                 f"scoreboard players operation "
                 f"{namespace}.{target} {SB_VARS} "
                 f"= "
-                f"{namespace}.?Result {SB_TEMP}\n"
+                f"{namespace}{ResultExt} {SB_TEMP}\n"
             )
             if ENABLE_DEBUGGING:
                 command += DEBUG_OBJECTIVE(
                     DebugTip.Set,
                     objective=SB_VARS, name=f"{namespace}.{target}",
-                    from_objective=SB_TEMP, from_name=f"{namespace}.?Result"
+                    from_objective=SB_TEMP, from_name=f"{namespace}{ResultExt}"
                 )
-                command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}.?Result")
+                command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
 
-            command += f"scoreboard players reset {namespace}.?Result {SB_TEMP}\n"
+            command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
 
         return command
 
@@ -360,16 +449,16 @@ def generate_code(node, namespace: str):
                     f"scoreboard players operation "
                     f"{func}.{name} {SB_ARGS} "  # To
                     "= "  # 运算符
-                    f"{func_result}.?Result {SB_TEMP}\n"  # From
+                    f"{func_result}{ResultExt} {SB_TEMP}\n"  # From
                 )
                 if ENABLE_DEBUGGING:
                     commands += DEBUG_OBJECTIVE(
                         DebugTip.Set,
                         objective=SB_ARGS, name=f"{func}.{name}",
-                        from_objective=SB_TEMP, from_name=f"{func_result}.?Result"
+                        from_objective=SB_TEMP, from_name=f"{func_result}{ResultExt}"
                     )
-                    del_args += DEBUG_OBJECTIVE(objective=SB_ARGS, name=f"{func_result}.?Result")
-                del_args += f"scoreboard players reset {func_result}.?Result {SB_TEMP}\n"
+                    del_args += DEBUG_OBJECTIVE(objective=SB_ARGS, name=f"{func_result}{ResultExt}")
+                del_args += f"scoreboard players reset {func_result}{ResultExt} {SB_TEMP}\n"
 
             elif isinstance(value, ast.Constant):
                 commands += f"scoreboard players set {func}.{name} {SB_ARGS} {value.value}\n"
