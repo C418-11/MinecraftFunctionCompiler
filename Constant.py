@@ -19,7 +19,7 @@ class ScoreBoards:
 
 
 class RawJsons:
-    Prefix = json.dumps({
+    Prefix = {
         "text": "[Python]",
 
         "clickEvent": {
@@ -38,12 +38,12 @@ class RawJsons:
         "obfuscated": False,
 
         "font": "minecraft:default",
-    })
+    }
 
     class HoverEvents:
-        Author = json.dumps({
+        Author = {
             "hoverEvent": {"action": "show_text", "value": "Made By: C418____11"}
-        })[1:-1]
+        }
 
 
 class Flags:
@@ -98,8 +98,8 @@ RAWJSON_PLACEHOLDER_MAP = {
         "font": "minecraft:default",
     }),
 
-    "RAWJSON:Prefix": RawJsons.Prefix,
-    "RAWJSON.HoverEvent:Author": RawJsons.HoverEvents.Author,
+    "RAWJSON:Prefix": json.dumps(RawJsons.Prefix),
+    "RAWJSON.HoverEvent:Author": json.dumps(RawJsons.HoverEvents.Author)[1:-1],
 }
 
 
