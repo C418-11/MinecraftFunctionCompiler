@@ -49,6 +49,7 @@ class RawJsons:
 class Flags:
     TRUE = "True"
     FALSE = "False"
+    NEG = "Neg"
 
     DEBUG = "DEBUG"
 
