@@ -384,6 +384,62 @@ def generate_code(node, namespace: str):
 
         return command
 
+    if isinstance(node, ast.UnaryOp):
+        command = ''
+
+        command += generate_code(node.operand, namespace)
+
+        if isinstance(node.op, ast.Not):
+            command += CHECK_SB(
+                SBCheckType.UNLESS,
+                f"{namespace}{ResultExt}", SB_TEMP,
+                Flags.FALSE, SB_FLAGS,
+                (
+                    f"scoreboard players operation "
+                    f"{namespace}.*UnaryOp {SB_TEMP} "
+                    f"= "
+                    f"{Flags.FALSE} {SB_FLAGS}"
+                )
+            )
+
+            command += CHECK_SB(
+                SBCheckType.IF,
+                f"{namespace}{ResultExt}", SB_TEMP,
+                Flags.FALSE, SB_FLAGS,
+                (
+                    f"scoreboard players operation "
+                    f"{namespace}.*UnaryOp {SB_TEMP} "
+                    f"= "
+                    f"{Flags.TRUE} {SB_FLAGS}"
+                )
+            )
+        elif isinstance(node.op, ast.USub):
+            command += (
+                f"scoreboard players operation "
+                f"{namespace}.*UnaryOp {SB_TEMP} "
+                f"= "
+                f"{namespace}{ResultExt} {SB_TEMP}\n"
+            )
+            command += (
+                f"scoreboard players operation "
+                f"{namespace}.*UnaryOp {SB_TEMP} "
+                f"*= "
+                f"{Flags.NEG} {SB_FLAGS}\n"
+            )
+        else:
+            raise Exception(f"暂时无法解析的UnaryOp运算 {node.op}")
+
+        command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+
+        command += f"scoreboard players operation {namespace}{ResultExt} {SB_TEMP} = {namespace}.*UnaryOp {SB_TEMP}\n"
+
+        command += DEBUG_OBJECTIVE(DebugTip.Calc, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
+        command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}.*UnaryOp")
+
+        command += f"scoreboard players reset {namespace}.*UnaryOp {SB_TEMP}\n"
+
+        return command
+
     if isinstance(node, ast.Expr):
         return generate_code(node.value, namespace)
 
