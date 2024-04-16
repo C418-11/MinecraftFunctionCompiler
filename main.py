@@ -212,7 +212,7 @@ def generate_code(node, namespace: str):
     if isinstance(node, ast.Module):
         with open(namespace_path(namespace, "module.mcfunction"), mode='w', encoding="utf-8") as f:
             for statement in node.body:
-                c = generate_code(statement, os.path.join(namespace, "module"))
+                c = generate_code(statement, namespace)
                 f.write(c)
 
         return ''
