@@ -10,9 +10,6 @@ from Constant import RawJsons
 
 import warnings
 
-with open("test/add.py", mode='r', encoding="utf-8") as _:
-    tree = ast.parse(_.read())
-
 
 class ABCParameterType(ABC):
     def __init__(self, name):
@@ -81,15 +78,32 @@ SB_VARS: str = ScoreBoards.Vars
 SAVE_PATH = "./.output/"
 # SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks\函数测试\data\source_code\functions"
 
+READ_PATH = "./test"
+
 ResultExt = ".?Result"
 
+BASE_NAMESPACE = "source_code:"
 
-def namespace_path(namespace: str, path: str):
+
+def join_base_ns(path: str) -> str:
+    if BASE_NAMESPACE.endswith(":"):
+        new_namespace = f"{BASE_NAMESPACE}{path}"
+    else:
+        new_namespace = f"{BASE_NAMESPACE}\\{path}"
+
+    return new_namespace
+
+
+def namespace_path(namespace: str, path: str) -> str:
     base_path = os.path.join(namespace.split(":", 1)[1], path)
     return os.path.join(SAVE_PATH, base_path)
 
 
-def IF_FLAG(flag: str, cmd: str):
+def root_namespace(namespace: str) -> str:
+    return namespace.split(":", 1)[1].split('\\')[0]
+
+
+def IF_FLAG(flag: str, cmd: str) -> str:
     """
     行尾 **没有** 换行符
     """
@@ -108,17 +122,19 @@ def CHECK_SB(t: str, a_name: str, a_objective: str, b_name: str, b_objective: st
     return f"execute {t} score {a_name} {a_objective} = {b_name} {b_objective} run {cmd}\n"
 
 
-ENABLE_DEBUGGING: bool = True
+ENABLE_DEBUGGING: bool = False
 
 
 def DEBUG_OBJECTIVE(
         raw_json: dict = None, *,
         objective: str, name: str,
         from_objective: str = None, from_name: str = None
-):
+) -> str:
     """
     行尾 **有** 换行符
     """
+    if not ENABLE_DEBUGGING:
+        return ''
 
     if raw_json is None:
         raw_json = {"text": ""}
@@ -159,10 +175,13 @@ def DEBUG_OBJECTIVE(
     return f'{IF_FLAG(Flags.DEBUG, f"tellraw @a {json_txt}")}\n'
 
 
-def DEBUG_TEXT(*raw_json: dict):
+def DEBUG_TEXT(*raw_json: dict) -> str:
     """
     行尾 **有** 换行符
     """
+    if not ENABLE_DEBUGGING:
+        return ''
+
     json_txt = json.dumps({
         "text": "",
         "extra": [
@@ -176,14 +195,6 @@ def DEBUG_TEXT(*raw_json: dict):
     return f'{IF_FLAG(Flags.DEBUG, f"tellraw @a {json_txt}")}\n'
 
 
-if not ENABLE_DEBUGGING:
-    def __DisableDebugging(*_args, **_kwargs):
-        return ''
-
-    DEBUG_OBJECTIVE = __DisableDebugging
-    DEBUG_TEXT = __DisableDebugging
-
-
 class DebugTip:
     Reset = {"text": "重置: ", "color": "gold", "bold": True}
     Set = {"text": "设置: ", "color": "gold", "bold": True}
@@ -194,28 +205,58 @@ class DebugTip:
     SetArg = {"text": "传参: ", "color": "gold", "bold": True}
 
     Call = {"text": "调用: ", "color": "gold", "bold": True}
+    Init = {"text": "初始化: ", "color": "gold", "bold": True}
 
 
 Uid = 9
 
 
-def newUid():
+def newUid() -> str:
     global Uid
     Uid += 1
     return hex(Uid)[2:]
 
 
-def generate_code(node, namespace: str):
+import_module_map: dict[str, dict[str, str]] = {}
+
+
+def generate_code(node, namespace: str) -> str:
     namespace = os.path.normpath(namespace)
     os.makedirs(namespace_path(namespace, ''), exist_ok=True)
 
     if isinstance(node, ast.Module):
+        import_module_map[root_namespace(namespace)] = {}
         with open(namespace_path(namespace, "module.mcfunction"), mode='w', encoding="utf-8") as f:
             for statement in node.body:
                 c = generate_code(statement, namespace)
                 f.write(c)
 
         return ''
+
+    if isinstance(node, ast.Import):
+        command = ''
+        for n in node.names:
+            if not isinstance(n, ast.alias):
+                raise Exception("当前版本只允许 Import 中有 alias")
+
+            with open(os.path.join(READ_PATH, f"{n.name}.py"), mode='r', encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+
+            print("------------导入文件-----------")
+            print(os.path.normpath(os.path.join(READ_PATH, f"{n.name}.py")))
+            print(ast.dump(tree, indent=4))
+            print("------------------------------")
+
+            new_namespace = join_base_ns(n.name)
+            generate_code(tree, new_namespace)
+
+            as_name = n.asname if n.asname is not None else n.name
+
+            import_module_map[root_namespace(namespace)].update({as_name: n.name})
+
+            command += DEBUG_TEXT(DebugTip.Init, {"text": f"导入 {n.name}"})
+            command += f"function {new_namespace}/module\n"
+        return command
 
     if isinstance(node, ast.FunctionDef):
         with open(namespace_path(namespace, f"{node.name}.mcfunction"), mode='w', encoding="utf-8") as f:
@@ -319,10 +360,32 @@ def generate_code(node, namespace: str):
         return command
 
     if isinstance(node, ast.Name):
+        assert isinstance(node.ctx, ast.Load)
         return (
             f"scoreboard players operation "
             f"{namespace}{ResultExt} {SB_TEMP} "
-            f"= {namespace}.{node.id} {SB_VARS}\n"
+            f"= "
+            f"{namespace}.{node.id} {SB_VARS}\n"
+        )
+
+    if isinstance(node, ast.Attribute):
+        assert isinstance(node.ctx, ast.Load)
+        if not isinstance(node.value, ast.Name):
+            raise Exception("暂时无法解析的值")
+
+        modules = import_module_map[root_namespace(namespace)]
+
+        if node.value.id not in modules:
+            print(node.value.id, modules)
+            raise Exception("暂时无法解析的属性")
+
+        attr_namespace = join_base_ns(f"{modules[node.value.id]}.{node.attr}")
+
+        return (
+            f"scoreboard players operation "
+            f"{namespace}{ResultExt} {SB_TEMP} "
+            f"= "
+            f"{attr_namespace} {SB_VARS}\n"
         )
 
     if isinstance(node, ast.Return):
@@ -493,7 +556,7 @@ def generate_code(node, namespace: str):
         if isinstance(node.func, ast.Name):
             func = node.func.id
         else:
-            raise Exception("暂时无法解析的函数名")
+            raise Exception(f"暂时无法解析的函数名 {type(node.func).__name__}")
 
         # 如果是python内置函数，则不需要加上命名空间
         if func not in dir(__builtins__):
@@ -558,6 +621,18 @@ def generate_code(node, namespace: str):
     return f"tellraw @a {err_msg}\n"
 
 
-print(ast.dump(tree, indent=4))
-print(generate_code(tree, "source_code:add"))
-print(f"[DEBUG] {func_args=}")
+def main():
+    file_name = "add"
+
+    with open(os.path.join(READ_PATH, f"{file_name}.py"), mode='r', encoding="utf-8") as _:
+        tree = ast.parse(_.read())
+
+    print(ast.dump(tree, indent=4))
+    print(generate_code(tree, join_base_ns(file_name)))
+    print(f"[DEBUG] {func_args=}")
+    print()
+    print(f"[DEBUG] {import_module_map=}")
+
+
+if __name__ == "__main__":
+    main()
