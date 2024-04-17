@@ -119,7 +119,7 @@ def CHECK_SB(t: str, a_name: str, a_objective: str, b_name: str, b_objective: st
     return f"execute {t} score {a_name} {a_objective} = {b_name} {b_objective} run {cmd}\n"
 
 
-ENABLE_DEBUGGING: bool = False
+ENABLE_DEBUGGING: bool = True
 
 
 def DEBUG_OBJECTIVE(
@@ -205,6 +205,30 @@ class DebugTip:
     Init = {"text": "初始化: ", "color": "gold", "bold": True}
 
 
+GENERATE_COMMENTS: bool = True
+
+
+def COMMENT(*texts: str, **kv_texts) -> str:
+    if not GENERATE_COMMENTS:
+        return ''
+
+    nor_text = ' '.join(texts)
+    kv_text = '\n'.join(f"{k} = {v}" for k, v in kv_texts.items())
+
+    txt_ls = []
+    if nor_text:
+        txt_ls.extend(nor_text.split('\n'))
+    if kv_text:
+        txt_ls.extend(kv_text.split('\n'))
+
+    ret = '\n# '.join(txt_ls)
+
+    if ret:
+        ret = f"# {ret}\n"
+
+    return ret
+
+
 Uid = 9
 
 
@@ -218,6 +242,12 @@ import_module_map: dict[str, dict[str, str]] = {}
 
 
 def node_to_namespace(node, namespace: str) -> tuple[str, str, str]:
+    """
+    :param node: AST节点
+    :param namespace: 当前命名空间
+    :return: (name, full_namespace, root_namespace)
+    """
+
     if isinstance(node, ast.Name):
         return node.id, f"{namespace}\\{node.id}", namespace
     if isinstance(node, ast.Attribute):
@@ -230,7 +260,7 @@ def node_to_namespace(node, namespace: str) -> tuple[str, str, str]:
             raise Exception("暂时无法解析的属性")
 
         return (
-            f"{node_value}\\{node.attr}",
+            node.attr,
             join_base_ns(f"{modules[node_value]}\\{node.attr}"),
             join_base_ns(f"{modules[node_value]}")
         )
@@ -244,7 +274,7 @@ def generate_code(node, namespace: str) -> str:
 
     if isinstance(node, ast.Module):
         import_module_map[root_namespace(namespace)] = {}
-        with open(namespace_path(namespace, "module.mcfunction"), mode='w', encoding="utf-8") as f:
+        with open(namespace_path(namespace, ".__module.mcfunction"), mode='w', encoding="utf-8") as f:
             for statement in node.body:
                 c = generate_code(statement, namespace)
                 f.write(c)
@@ -272,14 +302,23 @@ def generate_code(node, namespace: str) -> str:
 
             import_module_map[root_namespace(namespace)].update({as_name: n.name})
 
-            command += DEBUG_TEXT(DebugTip.Init, {"text": f"导入 {n.name}"})
-            command += f"function {new_namespace}/module\n"
+            command += COMMENT(f"Import:导入模块", name=n.name, as_name=as_name)
+            command += DEBUG_TEXT(
+                DebugTip.Init,
+                {"text": f"导入 ", "color": "gold", "bold": True},
+                {"text": f"{n.name}", "color": "dark_purple"},
+                {"text": f" 用作 ", "color": "gold"},
+                {"text": f"{as_name}", "color": "dark_purple"},
+            )
+            command += f"function {new_namespace}/.__module\n"
         return command
 
     if isinstance(node, ast.FunctionDef):
         with open(namespace_path(namespace, f"{node.name}.mcfunction"), mode='w', encoding="utf-8") as f:
+            f.write(COMMENT(f"FunctionDef:函数头"))
             args = generate_code(node.args, os.path.join(namespace, node.name))
             f.write(args)
+            f.write(COMMENT(f"FunctionDef:函数体"))
             for statement in node.body:
                 body = generate_code(statement, os.path.join(namespace, node.name))
                 f.write(body)
@@ -310,6 +349,7 @@ def generate_code(node, namespace: str) -> str:
 
         command += generate_code(node.test, namespace)
 
+        command += COMMENT(f"IF:检查条件")
         command += CHECK_SB(
             SBCheckType.UNLESS,
             f"{namespace}{ResultExt}", SB_TEMP,
@@ -346,6 +386,8 @@ def generate_code(node, namespace: str) -> str:
         args_dict = OrderedDict()
         command = ''
 
+        command += COMMENT(f"arguments:处理参数")
+
         # 反转顺序以匹配默认值
         for name, default in zip_longest(reversed(args), reversed(node.defaults), fillvalue=None):
 
@@ -379,12 +421,15 @@ def generate_code(node, namespace: str) -> str:
 
     if isinstance(node, ast.Name):
         assert isinstance(node.ctx, ast.Load)
-        return (
+        command = ''
+        command += COMMENT(f"Name:读取变量", name=node.id)
+        command += (
             f"scoreboard players operation "
             f"{namespace}{ResultExt} {SB_TEMP} "
             f"= "
             f"{namespace}.{node.id} {SB_VARS}\n"
         )
+        return command
 
     if isinstance(node, ast.Attribute):
         assert isinstance(node.ctx, ast.Load)
@@ -411,6 +456,7 @@ def generate_code(node, namespace: str) -> str:
 
         father_namespace = '\\'.join(namespace.split('\\')[:-1])
 
+        command += COMMENT(f"Return:将返回值传递给父命名空间")
         command += (
             f"scoreboard players operation "
             f"{father_namespace}{ResultExt} {SB_TEMP} "
@@ -431,12 +477,15 @@ def generate_code(node, namespace: str) -> str:
 
     if isinstance(node, ast.BinOp):
         command = ''
+        command += COMMENT(f"BinOp:二进制运算", op=type(node.op).__name__)
 
+        command += COMMENT(f"BinOp:处理左值")
         command += generate_code(node.left, namespace)
 
         command += f"scoreboard players operation {namespace}.*BinOp {SB_TEMP} = {namespace}{ResultExt} {SB_TEMP}\n"
         command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
 
+        command += COMMENT(f"BinOp:处理右值")
         command += generate_code(node.right, namespace)
 
         if isinstance(node.op, ast.Add):
@@ -454,6 +503,7 @@ def generate_code(node, namespace: str) -> str:
         else:
             raise Exception(f"无法解析的运算符 {node.op}")
 
+        command += COMMENT(f"BinOp:传递结果")
         command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
 
         command += f"scoreboard players operation {namespace}{ResultExt} {SB_TEMP} = {namespace}.*BinOp {SB_TEMP}\n"
@@ -533,7 +583,9 @@ def generate_code(node, namespace: str) -> str:
         if not isinstance(node.value, int):
             raise Exception(f"无法解析的常量 {node.value}")
 
-        command = (
+        command = ''
+        command += COMMENT(f"Constant:读取常量", value=value)
+        command += (
             f"scoreboard players set "
             f"{namespace}{ResultExt} {SB_TEMP} "
             f"{value}\n"
@@ -547,21 +599,21 @@ def generate_code(node, namespace: str) -> str:
         command = generate_code(node.value, namespace)
 
         for t in node.targets:
-            if not isinstance(t, ast.Name):
-                raise Exception("暂时只能赋值Name节点")
+            name, _, root_ns = node_to_namespace(t, namespace)
 
-            target = t.id
+            target_namespace = f"{root_ns}.{name}"
 
+            command += COMMENT(f"Assign:将结果赋值给变量", name=name)
             command += (
                 f"scoreboard players operation "
-                f"{namespace}.{target} {SB_VARS} "
+                f"{target_namespace} {SB_VARS} "
                 f"= "
                 f"{namespace}{ResultExt} {SB_TEMP}\n"
             )
 
             command += DEBUG_OBJECTIVE(
                 DebugTip.Assign,
-                objective=SB_VARS, name=f"{namespace}.{target}",
+                objective=SB_VARS, name=f"{target_namespace}",
                 from_objective=SB_TEMP, from_name=f"{namespace}{ResultExt}"
             )
             command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
@@ -591,6 +643,7 @@ def generate_code(node, namespace: str) -> str:
                 raise SyntaxError(f"函数 {func} 在调用时传入了额外的值 {json_value}")
 
             # 如果参数未提供值，且不是默认值，则报错
+            # 否者，使用默认值
             if value is None:
                 if not isinstance(this_func_args[name], DefaultArgType):
                     raise SyntaxError(f"函数 {func} 的参数 {name} 未提供值")
@@ -598,10 +651,15 @@ def generate_code(node, namespace: str) -> str:
                 default_value = this_func_args[name].default
 
                 if isinstance(default_value, UnnecessaryParameter):
+                    commands += COMMENT(f"Call:忽略参数", name=name)
                     continue
+
+                commands += COMMENT(f"Call:使用默认值", name=name, value=default_value)
                 value = ast.Constant(value=this_func_args[name].default)
 
             commands += generate_code(value, namespace)
+
+            commands += COMMENT(f"Call:传递参数", name=name)
             commands += (
                 f"scoreboard players operation "
                 f"{func}.{name} {SB_ARGS} "
@@ -619,6 +677,7 @@ def generate_code(node, namespace: str) -> str:
             commands += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
 
             # 删除已经使用过的参数
+            del_args += COMMENT(f"Call:重置参数", name=name)
             del_args += DEBUG_OBJECTIVE(DebugTip.DelArg, objective=SB_ARGS, name=f"{func}.{name}")
             del_args += f"scoreboard players reset {func}.{name} {SB_ARGS}\n"
 
@@ -630,6 +689,7 @@ def generate_code(node, namespace: str) -> str:
 
         # 如果根命名空间不一样，需要去额外处理返回值
         if ns != namespace:
+            commands += COMMENT(f"Call:跨命名空间读取返回值")
             commands += (
                 f"scoreboard players operation "
                 f"{namespace}{ResultExt} {SB_TEMP} "
