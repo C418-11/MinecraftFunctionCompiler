@@ -1,14 +1,15 @@
 import ast
 import json
 import os
-from abc import ABC
-from itertools import zip_longest
-from collections import OrderedDict
-from Constant import Flags
-from Constant import ScoreBoards
-from Constant import RawJsons
-
+import sys
 import warnings
+from abc import ABC
+from collections import OrderedDict
+from itertools import zip_longest
+
+from Constant import Flags
+from Constant import RawJsons
+from Constant import ScoreBoards
 
 
 class ABCParameterType(ABC):
@@ -66,7 +67,6 @@ func_args: dict[str, OrderedDict[str, ArgType | DefaultArgType]] = {
         ('x', DefaultArgType('x', UnnecessaryParameter())),
     ]),
     "python:built-in\\print": print_args,
-    # todo "python:built-in\\input": print_args,
 }
 
 SB_ARGS: str = ScoreBoards.Args
@@ -75,14 +75,11 @@ SB_FLAGS: str = ScoreBoards.Flags
 SB_INPUT: str = ScoreBoards.Input
 SB_VARS: str = ScoreBoards.Vars
 
-SAVE_PATH = "./.output/"
-# SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks\函数测试\data\source_code\functions"
-
-READ_PATH = "./test"
+SAVE_PATH: None | str = None
+READ_PATH: None | str = None
+BASE_NAMESPACE: None | str = None
 
 ResultExt = ".?Result"
-
-BASE_NAMESPACE = "source_code:"
 
 
 def join_base_ns(path: str) -> str:
@@ -218,6 +215,27 @@ def newUid() -> str:
 
 
 import_module_map: dict[str, dict[str, str]] = {}
+
+
+def node_to_namespace(node, namespace: str) -> tuple[str, str, str]:
+    if isinstance(node, ast.Name):
+        return node.id, f"{namespace}\\{node.id}", namespace
+    if isinstance(node, ast.Attribute):
+        modules = import_module_map[root_namespace(namespace)]
+
+        node_value = node_to_namespace(node.value, namespace)[0]
+
+        if node_value not in modules:
+            print(node_value, modules, file=sys.stderr)
+            raise Exception("暂时无法解析的属性")
+
+        return (
+            f"{node_value}\\{node.attr}",
+            join_base_ns(f"{modules[node_value]}\\{node.attr}"),
+            join_base_ns(f"{modules[node_value]}")
+        )
+
+    raise Exception("暂时不支持的节点类型")
 
 
 def generate_code(node, namespace: str) -> str:
@@ -553,16 +571,11 @@ def generate_code(node, namespace: str) -> str:
         return command
 
     if isinstance(node, ast.Call):
-        if isinstance(node.func, ast.Name):
-            func = node.func.id
-        else:
-            raise Exception(f"暂时无法解析的函数名 {type(node.func).__name__}")
+        func_name, func, ns = node_to_namespace(node.func, namespace)
 
         # 如果是python内置函数，则不需要加上命名空间
-        if func not in dir(__builtins__):
-            func = f"{namespace}\\{func}"
-        else:
-            func = f"python:built-in\\{func}"
+        if func_name in dir(__builtins__):
+            func = f"python:built-in\\{func_name}"
 
         commands: str = ''
         del_args: str = ''
@@ -615,6 +628,24 @@ def generate_code(node, namespace: str) -> str:
         commands += f"function {func}\n"
         commands += del_args
 
+        # 如果根命名空间不一样，需要去额外处理返回值
+        if ns != namespace:
+            commands += (
+                f"scoreboard players operation "
+                f"{namespace}{ResultExt} {SB_TEMP} "
+                f"= "
+                f"{ns}{ResultExt} {SB_TEMP}\n"
+            )
+
+            commands += DEBUG_OBJECTIVE(
+                DebugTip.Result,
+                objective=SB_TEMP, name=f"{namespace}{ResultExt}",
+                from_objective=SB_TEMP, from_name=f"{ns}{ResultExt}"
+            )
+            commands += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{ns}{ResultExt}")
+
+            commands += f"scoreboard players reset {ns}{ResultExt} {SB_TEMP}\n"
+
         return commands
 
     err_msg = json.dumps({"text": f"无法解析的节点: {namespace}.{type(node).__name__}", "color": "red"})
@@ -622,7 +653,16 @@ def generate_code(node, namespace: str) -> str:
 
 
 def main():
-    file_name = "add"
+    global SAVE_PATH
+    global READ_PATH
+    global BASE_NAMESPACE
+
+    SAVE_PATH = "./.output/"
+    SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks\函数测试\data\source_code\functions"
+    READ_PATH = "./tests/import_add"
+
+    BASE_NAMESPACE = "source_code:"
+    file_name = "caller"
 
     with open(os.path.join(READ_PATH, f"{file_name}.py"), mode='r', encoding="utf-8") as _:
         tree = ast.parse(_.read())
