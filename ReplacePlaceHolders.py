@@ -67,7 +67,7 @@ SAVE_PATH = r".\.output"
 def main():
     file_extensions = [".mcfunction", ".mcmeta"]
 
-    for file_path, relative_path, file in get_files(r"D:\source_code\python\MinecraftFunctionCompiler", r".\Python"):
+    for file_path, relative_path, file in get_files(r".", r".\Python"):
 
         print(file_path, relative_path, file)
         print("-"*50)
