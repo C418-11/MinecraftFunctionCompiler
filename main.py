@@ -239,17 +239,33 @@ def newUid() -> str:
 
 
 import_module_map: dict[str, dict[str, str]] = {}
+from_import_map: dict[str, dict[str, tuple[str, str]]] = {}
 
 
-def node_to_namespace(node, namespace: str) -> tuple[str, str, str]:
+def node_to_namespace(node, namespace: str) -> tuple[str, str | None, str | None]:
     """
     :param node: AST节点
     :param namespace: 当前命名空间
     :return: (name, full_namespace, root_namespace)
     """
 
+    if type(node) is str:
+        return node, None, None
+
     if isinstance(node, ast.Name):
-        return node.id, f"{namespace}\\{node.id}", namespace
+        from_modules = from_import_map[root_namespace(namespace)]
+        if node.id not in from_modules:
+            return node.id, f"{namespace}\\{node.id}", namespace
+
+        return node_to_namespace(
+            ast.Attribute(
+                value=from_modules[node.id][0],
+                attr=from_modules[node.id][1],
+                ctx=ast.Load()
+            ),
+            namespace
+        )
+
     if isinstance(node, ast.Attribute):
         modules = import_module_map[root_namespace(namespace)]
 
@@ -269,11 +285,11 @@ def node_to_namespace(node, namespace: str) -> tuple[str, str, str]:
 
 
 def generate_code(node, namespace: str) -> str:
-    namespace = os.path.normpath(namespace)
     os.makedirs(namespace_path(namespace, ''), exist_ok=True)
 
     if isinstance(node, ast.Module):
         import_module_map[root_namespace(namespace)] = {}
+        from_import_map[root_namespace(namespace)] = {}
         with open(namespace_path(namespace, ".__module.mcfunction"), mode='w', encoding="utf-8") as f:
             for statement in node.body:
                 c = generate_code(statement, namespace)
@@ -300,6 +316,11 @@ def generate_code(node, namespace: str) -> str:
 
             as_name = n.asname if n.asname is not None else n.name
 
+            if as_name in import_module_map[root_namespace(namespace)]:
+                warnings.warn(
+                    f"导入模块 {as_name} 已经存在, 可能覆盖之前的定义",
+                    UserWarning
+                )
             import_module_map[root_namespace(namespace)].update({as_name: n.name})
 
             command += COMMENT(f"Import:导入模块", name=n.name, as_name=as_name)
@@ -313,14 +334,30 @@ def generate_code(node, namespace: str) -> str:
             command += f"function {new_namespace}/.__module\n"
         return command
 
+    if isinstance(node, ast.ImportFrom):
+        for n in node.names:
+            if not isinstance(n, ast.alias):
+                raise Exception("当前版本只允许 ImportFrom 中有 alias")
+
+            as_name = n.asname if n.asname is not None else n.name
+
+            if as_name in import_module_map[root_namespace(namespace)]:
+                warnings.warn(
+                    f"导入模块 {as_name} 已经存在, 可能覆盖之前的定义",
+                    UserWarning
+                )
+            from_import_map[root_namespace(namespace)].update({as_name: (node.module, n.name)})
+
+        return generate_code(ast.Import(names=[ast.alias(name=node.module, asname=None)]), namespace)
+
     if isinstance(node, ast.FunctionDef):
         with open(namespace_path(namespace, f"{node.name}.mcfunction"), mode='w', encoding="utf-8") as f:
             f.write(COMMENT(f"FunctionDef:函数头"))
-            args = generate_code(node.args, os.path.join(namespace, node.name))
+            args = generate_code(node.args, f"{namespace}\\{node.name}")
             f.write(args)
             f.write(COMMENT(f"FunctionDef:函数体"))
             for statement in node.body:
-                body = generate_code(statement, os.path.join(namespace, node.name))
+                body = generate_code(statement, f"{namespace}\\{node.name}")
                 f.write(body)
         return ''
 
@@ -732,6 +769,8 @@ def main():
     print(f"[DEBUG] {func_args=}")
     print()
     print(f"[DEBUG] {import_module_map=}")
+    print()
+    print(f"[DEBUG] {from_import_map=}")
 
 
 if __name__ == "__main__":
