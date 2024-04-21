@@ -746,7 +746,7 @@ def generate_code(node, namespace: str) -> str:
         return commands
 
     err_msg = json.dumps({"text": f"无法解析的节点: {namespace}.{type(node).__name__}", "color": "red"})
-    return f"tellraw @a {err_msg}\n"
+    return f"tellraw @a {err_msg}\n" + COMMENT(ast.dump(node, indent=4))
 
 
 def main():
