@@ -10,7 +10,36 @@ from Template import NameNode
 print_end: bool = True
 
 
-@register_func
+def _tprint(*objects, sep: str = ' ', end: str = '\n'):
+    global print_end
+
+    if not isinstance(sep, str):
+        raise TypeError("sep must be str")
+
+    if not isinstance(end, str):
+        raise TypeError("end must be str")
+
+    obj_str: list[str] = []
+    if not print_end:
+        obj_str.append('↳')
+
+    for obj in objects:
+        obj_str.append(str(obj))
+        safe_sep = sep.replace('\n', '')
+        obj_str.append(safe_sep)
+    obj_str.pop()
+
+    if '\n' not in end:
+        obj_str.append('↴')
+        print_end = False
+    else:
+        safe_end = end.replace('\n', '')
+        obj_str.append(safe_end)
+
+    print(''.join(obj_str))
+
+
+@register_func(_tprint)
 def tprint(*objects, sep: str = ' ', end: str = '\n'):
     global print_end
 

@@ -31,38 +31,42 @@ def _parse_node(node, namespace: str):
     return node
 
 
-def register_func(func):
-    @functools.wraps(func)
-    def wrapper(args, kwargs, *, namespace):
+def register_func(python_func):
 
-        if args is None:
-            args = []
-        if kwargs is None:
-            kwargs = []
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(args, kwargs, *, namespace):
 
-        if not isinstance(args, list):
-            raise TypeError("args must be list")
-        if not isinstance(kwargs, list):
-            raise TypeError("kwargs must be list")
+            if args is None:
+                args = []
+            if kwargs is None:
+                kwargs = []
 
-        new_args = []
-        for arg in args:
-            new_args.append(_parse_node(arg, namespace))
+            if not isinstance(args, list):
+                raise TypeError("args must be list")
+            if not isinstance(kwargs, list):
+                raise TypeError("kwargs must be list")
 
-        new_kwargs = {}
-        for kwarg in kwargs:
-            if not isinstance(kwarg, ast.keyword):
-                raise TypeError("kwargs must be keyword")
-            new_kwargs[kwarg.arg] = _parse_node(kwarg.value, namespace)
+            new_args = []
+            for arg in args:
+                new_args.append(_parse_node(arg, namespace))
 
-        return func(*new_args, **new_kwargs)
+            new_kwargs = {}
+            for kwarg in kwargs:
+                if not isinstance(kwarg, ast.keyword):
+                    raise TypeError("kwargs must be keyword")
+                new_kwargs[kwarg.arg] = _parse_node(kwarg.value, namespace)
 
-    package_name = inspect.getmodule(func).__name__
-    full_path = f"{package_name}.{func.__name__}"
+            return func(*new_args, **new_kwargs)
 
-    template_funcs[full_path] = wrapper
+        package_name = inspect.getmodule(func).__name__
+        full_path = f"{package_name}.{func.__name__}"
 
-    return func
+        template_funcs[full_path] = wrapper
+
+        return python_func
+
+    return decorator
 
 
 __all__ = (
