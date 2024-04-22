@@ -247,6 +247,8 @@ def generate_code(node, namespace: str) -> str:
                     import_module_map[root_namespace(namespace)].update({as_name: n.name})
                     init_template(n.name)
                     continue
+                else:
+                    raise Exception(f"未找到模板文件 {template_path}")
 
             with open(file_path, mode='r', encoding="utf-8") as f:
                 tree = ast.parse(f.read())
@@ -483,9 +485,9 @@ def generate_code(node, namespace: str) -> str:
         else:
             raise Exception(f"无法解析的运算符 {node.op}")
 
-        command += COMMENT(f"BinOp:传递结果")
         command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
 
+        command += COMMENT(f"BinOp:传递结果")
         command += f"scoreboard players operation {namespace}{ResultExt} {SB_TEMP} = {namespace}.*BinOp {SB_TEMP}\n"
 
         command += DEBUG_OBJECTIVE(DebugTip.Calc, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
@@ -498,9 +500,11 @@ def generate_code(node, namespace: str) -> str:
     if isinstance(node, ast.UnaryOp):
         command = ''
 
+        command += COMMENT(f"UnaryOp:一元操作", op=type(node.op).__name__)
         command += generate_code(node.operand, namespace)
 
         if isinstance(node.op, ast.Not):
+            command += COMMENT(f"UnaryOp:运算", op="Not(not)")
             command += CHECK_SB(
                 SBCheckType.UNLESS,
                 f"{namespace}{ResultExt}", SB_TEMP,
@@ -525,6 +529,7 @@ def generate_code(node, namespace: str) -> str:
                 )
             )
         elif isinstance(node.op, ast.USub):
+            command += COMMENT(f"UnaryOp:运算", op="USub(-)")
             command += (
                 f"scoreboard players operation "
                 f"{namespace}.*UnaryOp {SB_TEMP} "
@@ -542,12 +547,115 @@ def generate_code(node, namespace: str) -> str:
 
         command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
 
+        command += COMMENT(f"UnaryOp:传递结果")
         command += f"scoreboard players operation {namespace}{ResultExt} {SB_TEMP} = {namespace}.*UnaryOp {SB_TEMP}\n"
 
         command += DEBUG_OBJECTIVE(DebugTip.Calc, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
         command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}.*UnaryOp")
 
         command += f"scoreboard players reset {namespace}.*UnaryOp {SB_TEMP}\n"
+
+        return command
+
+    if isinstance(node, ast.Compare):
+        command = ''
+        command += COMMENT(f"Compare:比较操作", **{
+            f"op{i}": type(cmp).__name__ for i, cmp in enumerate(node.comparators)
+        })
+
+        command += COMMENT(f"Compare:处理左值")
+        command += generate_code(node.left, namespace)
+
+        command += (
+            f"scoreboard players operation "
+            f"{namespace}.*CompareLeft {SB_TEMP} "
+            f"= "
+            f"{namespace}{ResultExt} {SB_TEMP}\n"
+        )
+
+        command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+
+        for i, op in enumerate(node.ops):
+            command += COMMENT(f"Compare:提取左值")
+            command += (
+                f"scoreboard players operation "
+                f"{namespace}.*CompareCalculate {SB_TEMP} "
+                f"= "
+                f"{namespace}.*CompareLeft {SB_TEMP}\n"
+            )
+            command += COMMENT(f"Compare:处理右值")
+            command += generate_code(node.comparators[i], namespace)
+            if isinstance(op, ast.Eq):
+                command += COMMENT(f"Compare:运算", op="Eq(==)")
+                command += (
+                    f"scoreboard players operation "
+                    f"{namespace}.*CompareCalculate {SB_TEMP} "
+                    f"-= "
+                    f"{namespace}{ResultExt} {SB_TEMP}\n"
+                )
+
+                command += CHECK_SB(
+                    SBCheckType.IF,
+                    f"{namespace}.*CompareCalculate", SB_TEMP,
+                    Flags.FALSE, SB_FLAGS,
+                    (
+                        f"scoreboard players operation "
+                        f"{namespace}.*CompareResult {SB_TEMP} "
+                        f"= "
+                        f"{Flags.TRUE} {SB_FLAGS}"
+                    )
+                )
+                command += CHECK_SB(
+                    SBCheckType.UNLESS,
+                    f"{namespace}.*CompareCalculate", SB_TEMP,
+                    Flags.FALSE, SB_FLAGS,
+                    (
+                        f"scoreboard players operation "
+                        f"{namespace}.*CompareResult {SB_TEMP} "
+                        f"= "
+                        f"{Flags.FALSE} {SB_FLAGS}"
+                    )
+                )
+            elif isinstance(op, ast.NotEq):
+                command += COMMENT(f"Compare:比较", op="NotEq(!=)")
+
+                eq_node = ast.Compare(
+                    left=node.left,
+                    ops=[ast.Eq()],
+                    comparators=[node.comparators[i]]
+                )
+
+                command += generate_code(
+                    ast.UnaryOp(
+                        op=ast.Not(),
+                        operand=eq_node
+                    ),
+                    namespace
+                )
+
+                command += (
+                    f"scoreboard players operation "
+                    f"{namespace}.*CompareResult {SB_TEMP} "
+                    f"= "
+                    f"{namespace}{ResultExt} {SB_TEMP}\n"
+                )
+
+                command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+            else:
+                raise Exception(f"无法解析的比较符 {op}")
+            command += f"scoreboard players reset {namespace}.*CompareCalculate {SB_TEMP}\n"
+
+        command += f"scoreboard players reset {namespace}.*CompareLeft {SB_TEMP}\n"
+
+        command += COMMENT(f"Compare:传递结果")
+        command += (
+            f"scoreboard players operation "
+            f"{namespace}{ResultExt} {SB_TEMP} "
+            f"= "
+            f"{namespace}.*CompareResult {SB_TEMP}\n"
+        )
+
+        command += f"scoreboard players reset {namespace}.*CompareResult {SB_TEMP}\n"
 
         return command
 
@@ -701,7 +809,7 @@ def generate_code(node, namespace: str) -> str:
         return commands
 
     err_msg = json.dumps({"text": f"无法解析的节点: {namespace}.{type(node).__name__}", "color": "red"})
-    return f"tellraw @a {err_msg}\n" + COMMENT(ast.dump(node, indent=4))
+    return f"tellraw @a {err_msg}\n" + COMMENT("无法解析的节点:") + COMMENT(ast.dump(node, indent=4))
 
 
 def main():
