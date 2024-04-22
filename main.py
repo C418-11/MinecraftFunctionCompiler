@@ -711,7 +711,7 @@ def main():
     global BASE_NAMESPACE
 
     SAVE_PATH = "./.output/"
-    SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks\函数测试\data\source_code\functions"
+    # SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks\函数测试\data\source_code\functions"
     READ_PATH = "./tests"
     TEMPLATE_PATH = "./template"
 
