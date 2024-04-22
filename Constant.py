@@ -8,6 +8,7 @@ import json
 
 
 DECIMAL_PRECISION: int = 3
+ResultExt = ".?Result"
 
 
 class ScoreBoards:
@@ -112,6 +113,8 @@ PLACEHOLDER_MAP = {
 }
 
 __all__ = (
+    "DECIMAL_PRECISION",
+    "ResultExt",
     "ScoreBoards",
     "RawJsons",
     "Flags",

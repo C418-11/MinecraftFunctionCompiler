@@ -9,6 +9,7 @@ from collections import OrderedDict
 from itertools import zip_longest
 
 from Constant import Flags
+from Constant import ResultExt
 from Constant import ScoreBoards
 from DebuggingTools import COMMENT
 from DebuggingTools import DEBUG_OBJECTIVE
@@ -84,8 +85,6 @@ SAVE_PATH: None | str = None
 READ_PATH: None | str = None
 TEMPLATE_PATH: None | str = None
 BASE_NAMESPACE: None | str = None
-
-ResultExt = ".?Result"
 
 
 def is_parent_path(path1, path2):
