@@ -14,8 +14,6 @@ print_end: bool = True
 def tprint(*objects, sep: str = ' ', end: str = '\n'):
     global print_end
 
-    if isinstance(sep, NameNode):
-        sep = sep.toJson()
     if not isinstance(sep, str):
         raise TypeError("sep must be str")
 
@@ -24,28 +22,29 @@ def tprint(*objects, sep: str = ' ', end: str = '\n'):
 
     obj_json: list[dict] = []
     if not print_end:
-        obj_json.append({"text": '↪'})
+        obj_json.append({"text": '↳'})
 
     for obj in objects:
         if isinstance(obj, NameNode):
             raw_json = obj.toJson()
         else:
             raw_json = {"text": str(obj)}
+
         obj_json.append(raw_json)
-        obj_json.append({"text": sep})
+        safe_sep = sep.replace('\n', '')
+        obj_json.append({"text": safe_sep})
     obj_json.pop()
 
-    if print_end:
+    if '\n' not in end:
+        obj_json.append({"text": '↴'})
+        print_end = False
+    else:
         safe_end = end.replace('\n', '')
         obj_json.append({"text": safe_end})
-    else:
-        obj_json.append({"text": '↩'})
-        print_end = True
 
     json_text = json.dumps({"text": '', "extra": obj_json})
+    if '\n' in json_text:
+        raise Exception("json text must not contain '\\n'")
     command = f"tellraw @a {json_text}\n"
-
-    if '\n' in end:
-        print_end = True
 
     return command
