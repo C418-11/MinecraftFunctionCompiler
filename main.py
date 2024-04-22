@@ -2,11 +2,13 @@ import ast
 import json
 import os
 import sys
+import traceback
 import warnings
 from abc import ABC
 from collections import OrderedDict
 from itertools import zip_longest
 
+from Template import template_funcs
 from Constant import Flags
 from Constant import RawJsons
 from Constant import ScoreBoards
@@ -77,9 +79,16 @@ SB_VARS: str = ScoreBoards.Vars
 
 SAVE_PATH: None | str = None
 READ_PATH: None | str = None
+TEMPLATE_PATH: None | str = None
 BASE_NAMESPACE: None | str = None
 
 ResultExt = ".?Result"
+
+
+def is_parent_path(path1, path2):
+    path1 = os.path.abspath(path1)
+    path2 = os.path.abspath(path2)
+    return os.path.commonpath([path1, path2]) == path1
 
 
 def join_base_ns(path: str) -> str:
@@ -273,7 +282,7 @@ def node_to_namespace(node, namespace: str) -> tuple[str, str | None, str | None
 
         if node_value not in modules:
             print(node_value, modules, file=sys.stderr)
-            raise Exception("暂时无法解析的属性")
+            raise Exception("未导入模块")
 
         return (
             node.attr,
@@ -282,6 +291,34 @@ def node_to_namespace(node, namespace: str) -> tuple[str, str | None, str | None
         )
 
     raise Exception("暂时不支持的节点类型")
+
+
+def check_template(file_path: str) -> bool:
+    import re
+    c = re.compile(r"#\s*MCFC:\s*(.*)")
+
+    with open(file_path, mode='r', encoding="utf-8") as f:
+        for line in f:
+            if not line.startswith("#"):
+                continue
+
+            res = c.match(line)
+            if (res is not None) and (res.group(1).lower() == "template"):
+                return True
+
+    return False
+
+
+def init_template(name: str) -> None:
+    import importlib
+    module = importlib.import_module(name)
+    try:
+        module.init()
+    except AttributeError:
+        pass
+    except Exception as err:
+        traceback.print_exception(err)
+        print(f"Template:模板 {name} 初始化失败", file=sys.stderr)
 
 
 def generate_code(node, namespace: str) -> str:
@@ -301,9 +338,29 @@ def generate_code(node, namespace: str) -> str:
         command = ''
         for n in node.names:
             if not isinstance(n, ast.alias):
-                raise Exception("当前版本只允许 Import 中有 alias")
+                raise Exception("Import 暂时只支持 alias")
 
-            with open(os.path.join(READ_PATH, f"{n.name}.py"), mode='r', encoding="utf-8") as f:
+            if n.name.startswith("."):
+                raise Exception("暂时不支持相对导入")
+
+            pack_path = n.name.replace(".", "\\")
+            file_path = os.path.join(READ_PATH, f"{pack_path}.py")
+
+            as_name = n.asname if n.asname is not None else n.name
+
+            if not os.path.exists(file_path):
+
+                template_path = f"{pack_path}.py"
+                if not is_parent_path(READ_PATH, file_path):
+                    template_path = os.path.join(TEMPLATE_PATH, f"{pack_path}.py")
+
+                res = check_template(template_path)
+                if res:
+                    import_module_map[root_namespace(namespace)].update({as_name: n.name})
+                    init_template(n.name)
+                    continue
+
+            with open(file_path, mode='r', encoding="utf-8") as f:
                 tree = ast.parse(f.read())
 
             print("------------导入文件-----------")
@@ -313,8 +370,6 @@ def generate_code(node, namespace: str) -> str:
 
             new_namespace = join_base_ns(n.name)
             generate_code(tree, new_namespace)
-
-            as_name = n.asname if n.asname is not None else n.name
 
             if as_name in import_module_map[root_namespace(namespace)]:
                 warnings.warn(
@@ -337,7 +392,7 @@ def generate_code(node, namespace: str) -> str:
     if isinstance(node, ast.ImportFrom):
         for n in node.names:
             if not isinstance(n, ast.alias):
-                raise Exception("当前版本只允许 ImportFrom 中有 alias")
+                raise Exception("ImportFrom 暂时只支持 alias")
 
             as_name = n.asname if n.asname is not None else n.name
 
@@ -672,6 +727,12 @@ def generate_code(node, namespace: str) -> str:
         try:
             this_func_args = func_args[func]
         except KeyError:
+            if f"{root_namespace(ns)}.{func_name}" in template_funcs:
+                func = template_funcs[f"{root_namespace(ns)}.{func_name}"]
+                commands += COMMENT(f"Template.Call:调用模板函数", func=func.__name__, namespace=root_namespace(ns))
+                commands += func(node.args, node.keywords, namespace=namespace)
+                commands += COMMENT(f"Template.Call:调用模版函数结束")
+                return commands
             raise Exception(f"未注册过的函数: {func}")
 
         for name, value in zip_longest(this_func_args, node.args, fillvalue=None):
@@ -752,14 +813,16 @@ def generate_code(node, namespace: str) -> str:
 def main():
     global SAVE_PATH
     global READ_PATH
+    global TEMPLATE_PATH
     global BASE_NAMESPACE
 
     SAVE_PATH = "./.output/"
-    # SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks\函数测试\data\source_code\functions"
-    READ_PATH = "./tests/import_add"
+    SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks\函数测试\data\source_code\functions"
+    READ_PATH = "./tests"
+    TEMPLATE_PATH = "./template"
 
     BASE_NAMESPACE = "source_code:"
-    file_name = "caller"
+    file_name = "template_print"
 
     with open(os.path.join(READ_PATH, f"{file_name}.py"), mode='r', encoding="utf-8") as _:
         tree = ast.parse(_.read())
@@ -771,6 +834,8 @@ def main():
     print(f"[DEBUG] {import_module_map=}")
     print()
     print(f"[DEBUG] {from_import_map=}")
+    print()
+    print(f"[DEBUG] {template_funcs=}")
 
 
 if __name__ == "__main__":
