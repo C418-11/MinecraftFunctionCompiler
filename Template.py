@@ -5,9 +5,10 @@ __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
 
-import inspect
-import functools
 import ast
+import functools
+import inspect
+import re
 
 from Constant import ScoreBoards
 
@@ -56,6 +57,13 @@ def register_func(python_func):
                 if not isinstance(kwarg, ast.keyword):
                     raise TypeError("kwargs must be keyword")
                 new_kwargs[kwarg.arg] = _parse_node(kwarg.value, namespace)
+
+            try:
+                return func(*new_args, **new_kwargs, namespace=namespace)
+            except TypeError as e:
+                cmp = re.compile(fr"{func.__name__}\(\)\sgot\san\sunexpected\skeyword\sargument\s'namespace'")
+                if not cmp.match(str(e)):
+                    raise
 
             return func(*new_args, **new_kwargs)
 
