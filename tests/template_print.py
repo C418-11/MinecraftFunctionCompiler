@@ -5,7 +5,6 @@ tprint("Hello, World!")
 var = 1
 tprint(var, var, var, "It works!", sep=' | ')
 
-
 tprint("a", end='')
 tprint("b", end='')
 tprint("c", end='')

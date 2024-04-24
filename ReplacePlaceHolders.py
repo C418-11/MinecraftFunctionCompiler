@@ -4,9 +4,8 @@
 __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
-
-import re
 import os
+import re
 
 from Constant import PLACEHOLDER_MAP
 
@@ -61,6 +60,8 @@ def get_files(base_path: str, root_dir: str):
 
 
 SAVE_PATH = r".\.output"
+
+
 # SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks"
 
 
@@ -70,7 +71,7 @@ def main():
     for file_path, relative_path, file in get_files(r".", r".\Python"):
 
         print(file_path, relative_path, file)
-        print("-"*50)
+        print("-" * 50)
         print("Reading", file_path)
 
         with open(file_path, encoding="UTF-8", mode='r') as f:
@@ -91,7 +92,7 @@ def main():
             f.write(new_code)
 
         print("Done.", file_path)
-        print("-"*50)
+        print("-" * 50)
         print()
         print()
 

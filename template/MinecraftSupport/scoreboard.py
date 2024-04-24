@@ -5,13 +5,15 @@
 __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
-from Constant import ResultExt
 from Constant import Flags
+from Constant import ResultExt
 from Constant import ScoreBoards
-from Template import register_func, NameNode
-from ScoreboardTools import SB_ASSIGN, SB_CONSTANT
-from ScoreboardTools import SB_Name2Code
+from ScoreboardTools import SB_ASSIGN
+from ScoreboardTools import SB_CONSTANT
 from ScoreboardTools import SB_Code2Name
+from ScoreboardTools import SB_Name2Code
+from Template import NameNode
+from Template import register_func
 
 SB_MAP: dict[str, dict[str, int]] = {
     ScoreBoards.Flags: {

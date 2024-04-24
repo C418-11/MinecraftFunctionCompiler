@@ -4,8 +4,8 @@
 
 import json
 
-from Template import register_func
 from Template import NameNode
+from Template import register_func
 
 print_end: bool = True
 

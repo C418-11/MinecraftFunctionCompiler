@@ -19,11 +19,11 @@ from ParameterTypes import DefaultArgType
 from ParameterTypes import UnnecessaryParameter
 from ParameterTypes import func_args
 from ScoreboardTools import CHECK_SB
-from ScoreboardTools import SB_Name2Code
 from ScoreboardTools import SBCheckType
 from ScoreboardTools import SBOperationType
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_CONSTANT
+from ScoreboardTools import SB_Name2Code
 from ScoreboardTools import SB_OP
 from ScoreboardTools import SB_RESET
 from Template import template_funcs

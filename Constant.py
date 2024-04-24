@@ -6,7 +6,6 @@ __version__ = "0.0.1Dev"
 
 import json
 
-
 DECIMAL_PRECISION: int = 3
 ResultExt = ".?Result"
 
@@ -63,12 +62,10 @@ SCOREBOARDS_PLACEHOLDER_MAP = {
     "SB:Vars": ScoreBoards.Vars,
 }
 
-
 BUILTIN_PLACEHOLDER_MAP = {
     "BuiltIn:print": "打印: ",
     "BuiltIn:input.TIP": "输入: ",
 }
-
 
 CHAT_PLACEHOLDER_MAP = {
     "CHAT:Initializing": "正在初始化...",
@@ -103,7 +100,6 @@ RAWJSON_PLACEHOLDER_MAP = {
     "RAWJSON:Prefix": json.dumps(RawJsons.Prefix),
     "RAWJSON.HoverEvent:Author": json.dumps(RawJsons.HoverEvents.Author)[1:-1],
 }
-
 
 PLACEHOLDER_MAP = {
     **SCOREBOARDS_PLACEHOLDER_MAP,

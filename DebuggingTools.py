@@ -6,7 +6,8 @@ __version__ = "0.0.1Dev"
 
 import json
 
-from Constant import Flags, RawJsons
+from Constant import Flags
+from Constant import RawJsons
 from Constant import ScoreBoards
 
 

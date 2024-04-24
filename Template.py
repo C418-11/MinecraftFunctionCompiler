@@ -4,15 +4,15 @@
 __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
-
 import ast
 import functools
 import inspect
 import re
 
-from Constant import ScoreBoards, ResultExt
-from ScoreboardTools import SB_Name2Code
+from Constant import ResultExt
+from Constant import ScoreBoards
 from ScoreboardTools import SB_ASSIGN
+from ScoreboardTools import SB_Name2Code
 
 template_funcs = {}
 
@@ -45,7 +45,6 @@ def _parse_node(node, namespace: str):
 
 
 def register_func(python_func):
-
     def decorator(func):
         @functools.wraps(func)
         def wrapper(args, kwargs, *, namespace):

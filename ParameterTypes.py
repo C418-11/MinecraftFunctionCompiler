@@ -65,7 +65,6 @@ func_args: dict[str, OrderedDict[str, ArgType | DefaultArgType]] = {
     "python:built-in\\print": print_args,
 }
 
-
 __all__ = (
     "func_args",
     "ABCParameterType",
