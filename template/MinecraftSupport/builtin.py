@@ -27,7 +27,9 @@ def _tprint(*objects, sep: str = ' ', end: str = '\n'):
         obj_str.append(str(obj))
         safe_sep = sep.replace('\n', '')
         obj_str.append(safe_sep)
-    obj_str.pop()
+
+    if obj_str:
+        obj_str.pop()
 
     if '\n' not in end:
         obj_str.append('↴')
