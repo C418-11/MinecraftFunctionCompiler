@@ -11,6 +11,7 @@ import inspect
 import re
 
 from Constant import ScoreBoards
+from ScoreboardTools import SB_Name2Code
 
 template_funcs = {}
 
@@ -21,7 +22,8 @@ class NameNode:
         self.namespace = namespace
 
     def toJson(self):
-        return {"score": {"name": f"{self.namespace}.{self.name}", "objective": ScoreBoards.Vars}}
+        name = SB_Name2Code[f"{self.namespace}.{self.name}"]
+        return {"score": {"name": f"{name}", "objective": ScoreBoards.Vars}}
 
 
 def _parse_node(node, namespace: str):

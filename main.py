@@ -4,7 +4,6 @@ import os
 import sys
 import traceback
 import warnings
-from abc import ABC
 from collections import OrderedDict
 from itertools import zip_longest
 
@@ -15,65 +14,18 @@ from DebuggingTools import COMMENT
 from DebuggingTools import DEBUG_OBJECTIVE
 from DebuggingTools import DEBUG_TEXT
 from DebuggingTools import DebugTip
+from ParameterTypes import ArgType
+from ParameterTypes import DefaultArgType
+from ParameterTypes import UnnecessaryParameter
+from ParameterTypes import func_args
+from ScoreboardTools import CHECK_SB
+from ScoreboardTools import SBCheckType
+from ScoreboardTools import SBOperationType
+from ScoreboardTools import SB_ASSIGN
+from ScoreboardTools import SB_CONSTANT
+from ScoreboardTools import SB_OP
+from ScoreboardTools import SB_RESET
 from Template import template_funcs
-
-
-class ABCParameterType(ABC):
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.name=})"
-
-
-class ABCDefaultParameterType(ABCParameterType):
-    def __init__(self, name, default):
-        super().__init__(name)
-        self.default = default
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.name=}, {self.default=})"
-
-
-class ArgType(ABCParameterType):
-    pass
-
-
-class DefaultArgType(ArgType, ABCDefaultParameterType):
-    pass
-
-
-class KwType(ABCParameterType):
-    pass
-
-
-class DefaultKwType(KwType, ABCDefaultParameterType):
-    pass
-
-
-class UnnecessaryParameter:
-    __instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        return cls.__instance
-
-    def __repr__(self):
-        return "<<UnnecessaryParameter>>"
-
-
-print_args = OrderedDict([
-    ('*', DefaultArgType('*', UnnecessaryParameter())),
-    *[(('*' + str(i)), DefaultArgType('*' + str(i), UnnecessaryParameter())) for i in range(1, 10)]
-])
-
-func_args: dict[str, OrderedDict[str, ArgType | DefaultArgType]] = {
-    "python:built-in\\int": OrderedDict([
-        ('x', DefaultArgType('x', UnnecessaryParameter())),
-    ]),
-    "python:built-in\\print": print_args,
-}
 
 SB_ARGS: str = ScoreBoards.Args
 SB_TEMP: str = ScoreBoards.Temp
@@ -109,18 +61,6 @@ def namespace_path(namespace: str, path: str) -> str:
 
 def root_namespace(namespace: str) -> str:
     return namespace.split(":", 1)[1].split('\\')[0]
-
-
-class SBCheckType:
-    IF = "if"
-    UNLESS = "unless"
-
-
-def CHECK_SB(t: str, a_name: str, a_objective: str, b_name: str, b_objective: str, cmd: str):
-    """
-    行尾 **有** 换行符
-    """
-    return f"execute {t} score {a_name} {a_objective} = {b_name} {b_objective} run {cmd}\n"
 
 
 Uid = 9
@@ -326,7 +266,6 @@ def generate_code(node, namespace: str) -> str:
                 f.write(body)
 
         command = ''
-        del_temp = ''
         func_path = f"{base_namespace}\\{block_uid}".replace('\\', '/')
 
         command += generate_code(node.test, namespace)
@@ -349,11 +288,9 @@ def generate_code(node, namespace: str) -> str:
             DebugTip.Reset,
             objective=SB_TEMP, name=f"{namespace}{ResultExt}"
         )
-        command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+        command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
-        cmd = command + del_temp
-
-        return cmd
+        return command
 
     if isinstance(node, ast.arguments):
         args = [arg.arg for arg in node.args]
@@ -381,11 +318,9 @@ def generate_code(node, namespace: str) -> str:
             else:
                 raise Exception("无法解析的默认值")
 
-            command += (
-                f"scoreboard players operation "
-                f"{namespace}.{name} {SB_VARS} "
-                f"= "
-                f"{namespace}.{name} {SB_ARGS}\n"
+            command += SB_ASSIGN(
+                f"{namespace}.{name}", SB_VARS,
+                f"{namespace}.{name}", SB_ARGS
             )
 
             command += DEBUG_OBJECTIVE(
@@ -405,11 +340,9 @@ def generate_code(node, namespace: str) -> str:
         assert isinstance(node.ctx, ast.Load)
         command = ''
         command += COMMENT(f"Name:读取变量", name=node.id)
-        command += (
-            f"scoreboard players operation "
-            f"{namespace}{ResultExt} {SB_TEMP} "
-            f"= "
-            f"{namespace}.{node.id} {SB_VARS}\n"
+        command += SB_ASSIGN(
+            f"{namespace}{ResultExt}", SB_TEMP,
+            f"{namespace}.{node.id}", SB_VARS
         )
         return command
 
@@ -426,11 +359,9 @@ def generate_code(node, namespace: str) -> str:
 
         attr_namespace = join_base_ns(f"{modules[node.value.id]}.{node.attr}")
 
-        return (
-            f"scoreboard players operation "
-            f"{namespace}{ResultExt} {SB_TEMP} "
-            f"= "
-            f"{attr_namespace} {SB_VARS}\n"
+        return SB_ASSIGN(
+            f"{namespace}{ResultExt}", SB_TEMP,
+            f"{attr_namespace}", SB_VARS
         )
 
     if isinstance(node, ast.Return):
@@ -439,11 +370,10 @@ def generate_code(node, namespace: str) -> str:
         father_namespace = '\\'.join(namespace.split('\\')[:-1])
 
         command += COMMENT(f"Return:将返回值传递给父命名空间")
-        command += (
-            f"scoreboard players operation "
-            f"{father_namespace}{ResultExt} {SB_TEMP} "
-            f"= "
-            f"{namespace}{ResultExt} {SB_TEMP}\n"
+
+        command += SB_ASSIGN(
+            f"{father_namespace}{ResultExt}", SB_TEMP,
+            f"{namespace}{ResultExt}", SB_TEMP
         )
 
         command += DEBUG_OBJECTIVE(
@@ -453,7 +383,7 @@ def generate_code(node, namespace: str) -> str:
         )
         command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
 
-        command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+        command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
         return command
 
@@ -464,36 +394,54 @@ def generate_code(node, namespace: str) -> str:
         command += COMMENT(f"BinOp:处理左值")
         command += generate_code(node.left, namespace)
 
-        command += f"scoreboard players operation {namespace}.*BinOp {SB_TEMP} = {namespace}{ResultExt} {SB_TEMP}\n"
-        command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+        command += SB_ASSIGN(
+            f"{namespace}.*BinOp", SB_TEMP,
+            f"{namespace}{ResultExt}", SB_TEMP
+        )
+        command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
         command += COMMENT(f"BinOp:处理右值")
         command += generate_code(node.right, namespace)
 
         if isinstance(node.op, ast.Add):
-            command += \
-                f"scoreboard players operation {namespace}.*BinOp {SB_TEMP} += {namespace}{ResultExt} {SB_TEMP}\n"
+            command += SB_OP(
+                SBOperationType.ADD,
+                f"{namespace}.*BinOp", SB_TEMP,
+                f"{namespace}{ResultExt}", SB_TEMP
+            )
         elif isinstance(node.op, ast.Sub):
-            command += \
-                f"scoreboard players operation {namespace}.*BinOp {SB_TEMP} -= {namespace}{ResultExt} {SB_TEMP}\n"
+            command += SB_OP(
+                SBOperationType.SUBTRACT,
+                f"{namespace}.*BinOp", SB_TEMP,
+                f"{namespace}{ResultExt}", SB_TEMP
+            )
         elif isinstance(node.op, ast.Mult):
-            command += \
-                f"scoreboard players operation {namespace}.*BinOp {SB_TEMP} *= {namespace}{ResultExt} {SB_TEMP}\n"
+            command += SB_OP(
+                SBOperationType.MULTIPLY,
+                f"{namespace}.*BinOp", SB_TEMP,
+                f"{namespace}{ResultExt}", SB_TEMP
+            )
         elif isinstance(node.op, ast.Div):
-            command += \
-                f"scoreboard players operation {namespace}.*BinOp {SB_TEMP} /= {namespace}{ResultExt} {SB_TEMP}\n"
+            command += SB_OP(
+                SBOperationType.DIVIDE,
+                f"{namespace}.*BinOp", SB_TEMP,
+                f"{namespace}{ResultExt}", SB_TEMP
+            )
         else:
             raise Exception(f"无法解析的运算符 {node.op}")
 
-        command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+        command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
         command += COMMENT(f"BinOp:传递结果")
-        command += f"scoreboard players operation {namespace}{ResultExt} {SB_TEMP} = {namespace}.*BinOp {SB_TEMP}\n"
+        command += SB_ASSIGN(
+            f"{namespace}{ResultExt}", SB_TEMP,
+            f"{namespace}.*BinOp", SB_TEMP
+        )
 
         command += DEBUG_OBJECTIVE(DebugTip.Calc, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
         command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}.*BinOp")
 
-        command += f"scoreboard players reset {namespace}.*BinOp {SB_TEMP}\n"
+        command += SB_RESET(f"{namespace}.*BinOp", SB_TEMP)
 
         return command
 
@@ -509,11 +457,9 @@ def generate_code(node, namespace: str) -> str:
                 SBCheckType.UNLESS,
                 f"{namespace}{ResultExt}", SB_TEMP,
                 Flags.FALSE, SB_FLAGS,
-                (
-                    f"scoreboard players operation "
-                    f"{namespace}.*UnaryOp {SB_TEMP} "
-                    f"= "
-                    f"{Flags.FALSE} {SB_FLAGS}"
+                SB_ASSIGN(
+                    f"{namespace}.*UnaryOp", SB_TEMP,
+                    Flags.FALSE, SB_FLAGS
                 )
             )
 
@@ -521,39 +467,38 @@ def generate_code(node, namespace: str) -> str:
                 SBCheckType.IF,
                 f"{namespace}{ResultExt}", SB_TEMP,
                 Flags.FALSE, SB_FLAGS,
-                (
-                    f"scoreboard players operation "
-                    f"{namespace}.*UnaryOp {SB_TEMP} "
-                    f"= "
-                    f"{Flags.TRUE} {SB_FLAGS}"
+                SB_ASSIGN(
+                    f"{namespace}.*UnaryOp", SB_TEMP,
+                    Flags.TRUE, SB_FLAGS
                 )
             )
+
         elif isinstance(node.op, ast.USub):
             command += COMMENT(f"UnaryOp:运算", op="USub(-)")
-            command += (
-                f"scoreboard players operation "
-                f"{namespace}.*UnaryOp {SB_TEMP} "
-                f"= "
-                f"{namespace}{ResultExt} {SB_TEMP}\n"
+            command += SB_ASSIGN(
+                f"{namespace}.*UnaryOp", SB_TEMP,
+                f"{namespace}{ResultExt}", SB_TEMP
             )
-            command += (
-                f"scoreboard players operation "
-                f"{namespace}.*UnaryOp {SB_TEMP} "
-                f"*= "
-                f"{Flags.NEG} {SB_FLAGS}\n"
+            command += SB_OP(
+                SBOperationType.MULTIPLY,
+                f"{namespace}.*UnaryOp", SB_TEMP,
+                Flags.NEG, SB_FLAGS
             )
         else:
             raise Exception(f"暂时无法解析的UnaryOp运算 {node.op}")
 
-        command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+        command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
         command += COMMENT(f"UnaryOp:传递结果")
-        command += f"scoreboard players operation {namespace}{ResultExt} {SB_TEMP} = {namespace}.*UnaryOp {SB_TEMP}\n"
+        command += SB_ASSIGN(
+            f"{namespace}{ResultExt}", SB_TEMP,
+            f"{namespace}.*UnaryOp", SB_TEMP
+        )
 
         command += DEBUG_OBJECTIVE(DebugTip.Calc, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
         command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}.*UnaryOp")
 
-        command += f"scoreboard players reset {namespace}.*UnaryOp {SB_TEMP}\n"
+        command += SB_RESET(f"{namespace}.*UnaryOp", SB_TEMP)
 
         return command
 
@@ -566,54 +511,46 @@ def generate_code(node, namespace: str) -> str:
         command += COMMENT(f"Compare:处理左值")
         command += generate_code(node.left, namespace)
 
-        command += (
-            f"scoreboard players operation "
-            f"{namespace}.*CompareLeft {SB_TEMP} "
-            f"= "
-            f"{namespace}{ResultExt} {SB_TEMP}\n"
+        command += SB_ASSIGN(
+            f"{namespace}.*CompareLeft", SB_TEMP,
+            f"{namespace}{ResultExt}", SB_TEMP
         )
 
-        command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+        command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
         for i, op in enumerate(node.ops):
             command += COMMENT(f"Compare:提取左值")
-            command += (
-                f"scoreboard players operation "
-                f"{namespace}.*CompareCalculate {SB_TEMP} "
-                f"= "
-                f"{namespace}.*CompareLeft {SB_TEMP}\n"
+            command += SB_ASSIGN(
+                f"{namespace}.*CompareCalculate", SB_TEMP,
+                f"{namespace}.*CompareLeft", SB_TEMP
             )
+
             command += COMMENT(f"Compare:处理右值")
             command += generate_code(node.comparators[i], namespace)
             if isinstance(op, ast.Eq):
                 command += COMMENT(f"Compare:运算", op="Eq(==)")
-                command += (
-                    f"scoreboard players operation "
-                    f"{namespace}.*CompareCalculate {SB_TEMP} "
-                    f"-= "
-                    f"{namespace}{ResultExt} {SB_TEMP}\n"
+                command += SB_OP(
+                    SBOperationType.SUBTRACT,
+                    f"{namespace}.*CompareCalculate", SB_TEMP,
+                    f"{namespace}{ResultExt}", SB_TEMP
                 )
 
                 command += CHECK_SB(
                     SBCheckType.IF,
                     f"{namespace}.*CompareCalculate", SB_TEMP,
                     Flags.FALSE, SB_FLAGS,
-                    (
-                        f"scoreboard players operation "
-                        f"{namespace}.*CompareResult {SB_TEMP} "
-                        f"= "
-                        f"{Flags.TRUE} {SB_FLAGS}"
+                    SB_ASSIGN(
+                        f"{namespace}.*CompareResult", SB_TEMP,
+                        Flags.TRUE, SB_FLAGS
                     )
                 )
                 command += CHECK_SB(
                     SBCheckType.UNLESS,
                     f"{namespace}.*CompareCalculate", SB_TEMP,
                     Flags.FALSE, SB_FLAGS,
-                    (
-                        f"scoreboard players operation "
-                        f"{namespace}.*CompareResult {SB_TEMP} "
-                        f"= "
-                        f"{Flags.FALSE} {SB_FLAGS}"
+                    SB_ASSIGN(
+                        f"{namespace}.*CompareResult", SB_TEMP,
+                        Flags.FALSE, SB_FLAGS
                     )
                 )
             elif isinstance(op, ast.NotEq):
@@ -633,29 +570,25 @@ def generate_code(node, namespace: str) -> str:
                     namespace
                 )
 
-                command += (
-                    f"scoreboard players operation "
-                    f"{namespace}.*CompareResult {SB_TEMP} "
-                    f"= "
-                    f"{namespace}{ResultExt} {SB_TEMP}\n"
+                command += SB_ASSIGN(
+                    f"{namespace}.*CompareResult", SB_TEMP,
+                    f"{namespace}{ResultExt}", SB_TEMP
                 )
 
-                command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+                command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
             else:
                 raise Exception(f"无法解析的比较符 {op}")
-            command += f"scoreboard players reset {namespace}.*CompareCalculate {SB_TEMP}\n"
+            command += SB_RESET(f"{namespace}.*CompareCalculate", SB_TEMP)
 
-        command += f"scoreboard players reset {namespace}.*CompareLeft {SB_TEMP}\n"
+        command += SB_RESET(f"{namespace}.*CompareLeft", SB_TEMP)
 
         command += COMMENT(f"Compare:传递结果")
-        command += (
-            f"scoreboard players operation "
-            f"{namespace}{ResultExt} {SB_TEMP} "
-            f"= "
-            f"{namespace}.*CompareResult {SB_TEMP}\n"
+        command += SB_ASSIGN(
+            f"{namespace}{ResultExt}", SB_TEMP,
+            f"{namespace}.*CompareResult", SB_TEMP
         )
 
-        command += f"scoreboard players reset {namespace}.*CompareResult {SB_TEMP}\n"
+        command += SB_RESET(f"{namespace}.*CompareResult", SB_TEMP)
 
         return command
 
@@ -673,11 +606,7 @@ def generate_code(node, namespace: str) -> str:
 
         command = ''
         command += COMMENT(f"Constant:读取常量", value=value)
-        command += (
-            f"scoreboard players set "
-            f"{namespace}{ResultExt} {SB_TEMP} "
-            f"{value}\n"
-        )
+        command += SB_CONSTANT(f"{namespace}{ResultExt}", SB_TEMP, value)
 
         command += DEBUG_OBJECTIVE(DebugTip.Set, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
 
@@ -692,11 +621,9 @@ def generate_code(node, namespace: str) -> str:
             target_namespace = f"{root_ns}.{name}"
 
             command += COMMENT(f"Assign:将结果赋值给变量", name=name)
-            command += (
-                f"scoreboard players operation "
-                f"{target_namespace} {SB_VARS} "
-                f"= "
-                f"{namespace}{ResultExt} {SB_TEMP}\n"
+            command += SB_ASSIGN(
+                target_namespace, SB_VARS,
+                namespace + ResultExt, SB_TEMP
             )
 
             command += DEBUG_OBJECTIVE(
@@ -706,7 +633,7 @@ def generate_code(node, namespace: str) -> str:
             )
             command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
 
-            command += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+            command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
         return command
 
@@ -760,11 +687,9 @@ def generate_code(node, namespace: str) -> str:
             commands += generate_code(value, namespace)
 
             commands += COMMENT(f"Call:传递参数", name=name)
-            commands += (
-                f"scoreboard players operation "
-                f"{func}.{name} {SB_ARGS} "
-                "= "
-                f"{namespace}{ResultExt} {SB_TEMP}\n"
+            commands += SB_ASSIGN(
+                f"{func}.{name}", SB_ARGS,
+                f"{namespace}{ResultExt}", SB_TEMP
             )
 
             commands += DEBUG_OBJECTIVE(
@@ -774,12 +699,12 @@ def generate_code(node, namespace: str) -> str:
             )
             commands += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
 
-            commands += f"scoreboard players reset {namespace}{ResultExt} {SB_TEMP}\n"
+            commands += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
             # 删除已经使用过的参数
             del_args += COMMENT(f"Call:重置参数", name=name)
             del_args += DEBUG_OBJECTIVE(DebugTip.DelArg, objective=SB_ARGS, name=f"{func}.{name}")
-            del_args += f"scoreboard players reset {func}.{name} {SB_ARGS}\n"
+            del_args += SB_RESET(f"{func}.{name}", SB_ARGS)
 
         func = func.replace('\\', '/')
 
@@ -790,11 +715,9 @@ def generate_code(node, namespace: str) -> str:
         # 如果根命名空间不一样，需要去额外处理返回值
         if ns != namespace:
             commands += COMMENT(f"Call:跨命名空间读取返回值")
-            commands += (
-                f"scoreboard players operation "
-                f"{namespace}{ResultExt} {SB_TEMP} "
-                f"= "
-                f"{ns}{ResultExt} {SB_TEMP}\n"
+            commands += SB_ASSIGN(
+                f"{namespace}{ResultExt}", SB_TEMP,
+                f"{ns}{ResultExt}", SB_TEMP
             )
 
             commands += DEBUG_OBJECTIVE(
@@ -804,7 +727,7 @@ def generate_code(node, namespace: str) -> str:
             )
             commands += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{ns}{ResultExt}")
 
-            commands += f"scoreboard players reset {ns}{ResultExt} {SB_TEMP}\n"
+            commands += SB_RESET(f"{ns}{ResultExt}", SB_TEMP)
 
         return commands
 
