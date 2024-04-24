@@ -10,8 +10,9 @@ import functools
 import inspect
 import re
 
-from Constant import ScoreBoards
+from Constant import ScoreBoards, ResultExt
 from ScoreboardTools import SB_Name2Code
+from ScoreboardTools import SB_ASSIGN
 
 template_funcs = {}
 
@@ -21,9 +22,18 @@ class NameNode:
         self.name = name
         self.namespace = namespace
 
+    @property
+    def code(self):
+        return SB_Name2Code[ScoreBoards.Vars][f"{self.namespace}.{self.name}"]
+
+    def toResult(self):
+        return SB_ASSIGN(
+            f"{self.namespace}{ResultExt}", ScoreBoards.Temp,
+            f"{self.namespace}.{self.name}", ScoreBoards.Vars
+        )
+
     def toJson(self):
-        name = SB_Name2Code[ScoreBoards.Vars][f"{self.namespace}.{self.name}"]
-        return {"score": {"name": f"{name}", "objective": ScoreBoards.Vars}}
+        return {"score": {"name": f"{self.code}", "objective": ScoreBoards.Vars}}
 
 
 def _parse_node(node, namespace: str):

@@ -8,8 +8,8 @@ __version__ = "0.0.1Dev"
 from Constant import ResultExt
 from Constant import Flags
 from Constant import ScoreBoards
-from Template import register_func
-from ScoreboardTools import SB_ASSIGN
+from Template import register_func, NameNode
+from ScoreboardTools import SB_ASSIGN, SB_CONSTANT
 from ScoreboardTools import SB_Name2Code
 from ScoreboardTools import SB_Code2Name
 
@@ -34,16 +34,16 @@ def _get_default(self: dict, key: str, default):
         return default
 
 
-def _get_score(name: str, objective: str):
-    return _get_default(SB_MAP[objective], name, 0)
-
-
 def _init_scoreboard(name, objective):
     if objective not in SB_Name2Code:
         SB_Name2Code[objective] = {}
         SB_Code2Name[objective] = {}
     SB_Name2Code[objective][name] = name
     SB_Code2Name[objective][name] = name
+
+
+def _get_score(name: str, objective: str):
+    return _get_default(SB_MAP[objective], name, 0)
 
 
 @register_func(_get_score)
@@ -70,7 +70,43 @@ def get_score(name: str, objective: str, *, namespace: str = None):
     return command
 
 
+def _write_score(name: str, objective: str, value: int):
+    SB_MAP[objective][name] = value
+
+
+@register_func(_write_score)
+def write_score(name: str, objective: str, value: int, *, namespace: str):
+    """
+    将值写入计分板
+
+    :param name: 目标
+    :param objective: 计分板
+    :param value: 值
+    :param namespace: 命名空间 !!!该值应当由编译器自动传入!!!
+    """
+
+    command = ''
+
+    if isinstance(value, NameNode):
+        command += value.toResult()
+    elif isinstance(value, int):
+        command += SB_CONSTANT(
+            f"{namespace}{ResultExt}", ScoreBoards.Temp,
+            value
+        )
+    else:
+        raise TypeError("value must be NameNode or int")
+
+    command += SB_ASSIGN(
+        name, objective,
+        f"{namespace}{ResultExt}", ScoreBoards.Temp
+    )
+
+    return command
+
+
 __all__ = (
     "SB_MAP",
     "get_score",
+    "write_score",
 )
