@@ -22,7 +22,7 @@ class NameNode:
         self.namespace = namespace
 
     def toJson(self):
-        name = SB_Name2Code[f"{self.namespace}.{self.name}"]
+        name = SB_Name2Code[ScoreBoards.Vars][f"{self.namespace}.{self.name}"]
         return {"score": {"name": f"{name}", "objective": ScoreBoards.Vars}}
 
 

@@ -459,7 +459,8 @@ def generate_code(node, namespace: str) -> str:
                 Flags.FALSE, SB_FLAGS,
                 SB_ASSIGN(
                     f"{namespace}.*UnaryOp", SB_TEMP,
-                    Flags.FALSE, SB_FLAGS
+                    Flags.FALSE, SB_FLAGS,
+                    line_break=False
                 )
             )
 
@@ -469,7 +470,8 @@ def generate_code(node, namespace: str) -> str:
                 Flags.FALSE, SB_FLAGS,
                 SB_ASSIGN(
                     f"{namespace}.*UnaryOp", SB_TEMP,
-                    Flags.TRUE, SB_FLAGS
+                    Flags.TRUE, SB_FLAGS,
+                    line_break=False
                 )
             )
 
@@ -541,7 +543,8 @@ def generate_code(node, namespace: str) -> str:
                     Flags.FALSE, SB_FLAGS,
                     SB_ASSIGN(
                         f"{namespace}.*CompareResult", SB_TEMP,
-                        Flags.TRUE, SB_FLAGS
+                        Flags.TRUE, SB_FLAGS,
+                        line_break=False
                     )
                 )
                 command += CHECK_SB(
@@ -550,7 +553,8 @@ def generate_code(node, namespace: str) -> str:
                     Flags.FALSE, SB_FLAGS,
                     SB_ASSIGN(
                         f"{namespace}.*CompareResult", SB_TEMP,
-                        Flags.FALSE, SB_FLAGS
+                        Flags.FALSE, SB_FLAGS,
+                        line_break=False
                     )
                 )
             elif isinstance(op, ast.NotEq):
@@ -747,7 +751,7 @@ def main():
     TEMPLATE_PATH = "./template"
 
     BASE_NAMESPACE = "source_code:"
-    file_name = "template_print"
+    file_name = "scoreboard_op"
 
     with open(os.path.join(READ_PATH, f"{file_name}.py"), mode='r', encoding="utf-8") as _:
         tree = ast.parse(_.read())

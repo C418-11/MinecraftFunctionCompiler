@@ -5,12 +5,13 @@
 __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
-
 from Constant import ResultExt
-from Constant import ScoreBoards
 from Constant import Flags
+from Constant import ScoreBoards
 from Template import register_func
-
+from ScoreboardTools import SB_ASSIGN
+from ScoreboardTools import SB_Name2Code
+from ScoreboardTools import SB_Code2Name
 
 SB_MAP: dict[str, dict[str, int]] = {
     ScoreBoards.Flags: {
@@ -37,6 +38,14 @@ def _get_score(name: str, objective: str):
     return _get_default(SB_MAP[objective], name, 0)
 
 
+def _init_scoreboard(name, objective):
+    if objective not in SB_Name2Code:
+        SB_Name2Code[objective] = {}
+        SB_Code2Name[objective] = {}
+    SB_Name2Code[objective][name] = name
+    SB_Code2Name[objective][name] = name
+
+
 @register_func(_get_score)
 def get_score(name: str, objective: str, *, namespace: str = None):
     """
@@ -52,11 +61,10 @@ def get_score(name: str, objective: str, *, namespace: str = None):
 
     command = ''
 
-    command += (
-        f"scoreboard players operation "
-        f"{namespace}{ResultExt} {ScoreBoards.Temp} "
-        f"= "
-        f"{name} {objective}\n"
+    _init_scoreboard(name, objective)
+    command += SB_ASSIGN(
+        f"{namespace}{ResultExt}", ScoreBoards.Temp,
+        name, objective
     )
 
     return command
