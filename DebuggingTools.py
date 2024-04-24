@@ -17,7 +17,7 @@ def IF_FLAG(flag: str, cmd: str) -> str:
     return f"execute if score {flag} {ScoreBoards.Flags} = {Flags.TRUE} {ScoreBoards.Flags} run {cmd}"
 
 
-ENABLE_DEBUGGING: bool = True
+ENABLE_DEBUGGING: bool = False
 
 
 def DEBUG_OBJECTIVE(
