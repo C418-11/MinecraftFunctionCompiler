@@ -19,6 +19,7 @@ from ParameterTypes import DefaultArgType
 from ParameterTypes import UnnecessaryParameter
 from ParameterTypes import func_args
 from ScoreboardTools import CHECK_SB
+from ScoreboardTools import SB_Name2Code
 from ScoreboardTools import SBCheckType
 from ScoreboardTools import SBOperationType
 from ScoreboardTools import SB_ASSIGN
@@ -765,6 +766,8 @@ def main():
     print(f"[DEBUG] {from_import_map=}")
     print()
     print(f"[DEBUG] {template_funcs=}")
+    print()
+    print(f"[DEBUG] {SB_Name2Code=}")
 
 
 if __name__ == "__main__":
