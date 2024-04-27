@@ -79,3 +79,6 @@ def tprint(*objects, sep: str = ' ', end: str = '\n'):
     command = f"tellraw @a {json_text}\n"
 
     return command
+
+
+__all__ = ("tprint",)
