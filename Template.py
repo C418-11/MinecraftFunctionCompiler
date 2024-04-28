@@ -41,6 +41,11 @@ def _parse_node(node, namespace: str):
         return node.value
     if isinstance(node, ast.Name):
         return NameNode(node.id, namespace=namespace)
+    if isinstance(node, ast.Dict):
+        dict_result = {}
+        for key, value in zip(node.keys, node.values, strict=True):
+            dict_result[_parse_node(key, namespace)] = _parse_node(value, namespace)
+        return dict_result
     return node
 
 
