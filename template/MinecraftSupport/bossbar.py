@@ -145,3 +145,80 @@ def set_name(_id: str, name: dict | str):
     _id = _CheckId(_id)
 
     return f"bossbar set {_id} name {json.dumps(_CheckName(name).to_dict())}\n"
+
+
+allow_color = "blue|green|pink|purple|red|white|yellow".split("|")
+
+
+def _CheckColor(color: str):
+    if color not in allow_color:
+        raise ValueError(f"color must be in {allow_color}")
+
+    return color
+
+
+def _set_color(_id: str, color: str):
+    _id = _CheckId(_id)
+    color = _CheckColor(color)
+    BossBar_Map[_id]["color"] = color
+
+
+@register_func(_set_color)
+def set_color(_id: str, color: str):
+    _id = _CheckId(_id)
+    color = _CheckColor(color)
+    return f"bossbar set {_id} color {color}\n"
+
+
+allow_style = "notched_6|notched_10|notched_12|notched_20|progress".split("|")
+
+
+def _CheckStyle(style: str | int):
+    if isinstance(style, int):
+        style = f"notched_{style}"
+
+    if style not in allow_style:
+        raise ValueError(f"style must be in {allow_style}")
+
+    return style
+
+
+def _set_style(_id: str, style: str | int):
+    _id = _CheckId(_id)
+    style = _CheckStyle(style)
+
+    BossBar_Map[_id]["style"] = style
+
+
+@register_func(_set_style)
+def set_style(_id: str, style: str | int):
+    _id = _CheckId(_id)
+    style = _CheckStyle(style)
+
+    return f"bossbar set {_id} style {style}\n"
+
+
+def _set_visible(_id: str, visible: bool):
+    _id = _CheckId(_id)
+    BossBar_Map[_id]["visible"] = visible
+
+
+@register_func(_set_visible)
+def set_visible(_id: str, visible: bool):
+    _id = _CheckId(_id)
+
+    return f"bossbar set {_id} visible {visible}\n"
+
+
+__all__ = (
+    "add",
+    "remove",
+
+    "set_players",
+    "set_value",
+    "set_max",
+    "set_name",
+    "set_color",
+    "set_style",
+    "set_visible",
+)
