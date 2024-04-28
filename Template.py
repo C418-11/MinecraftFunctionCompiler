@@ -8,6 +8,7 @@ import ast
 import functools
 import inspect
 import re
+import traceback
 
 from Constant import ResultExt
 from Constant import ScoreBoards
@@ -93,8 +94,39 @@ def register_func(python_func):
     return decorator
 
 
+def check_template(file_path: str) -> bool:
+    import re
+    c = re.compile(r"#\s*MCFC:\s*(.*)")
+
+    with open(file_path, mode='r', encoding="utf-8") as f:
+        for line in f:
+            if not line.startswith("#"):
+                continue
+
+            res = c.match(line)
+            if (res is not None) and (res.group(1).lower() == "template"):
+                return True
+
+    return False
+
+
+def init_template(name: str) -> None:
+    import importlib
+    module = importlib.import_module(name)
+    try:
+        module.init()
+    except AttributeError:
+        pass
+    except Exception as err:
+        traceback.print_exception(err)
+        print(f"Template:模板 {name} 初始化失败", file=sys.stderr)
+
+
 __all__ = (
     "NameNode",
     "template_funcs",
     "register_func",
+
+    "check_template",
+    "init_template"
 )

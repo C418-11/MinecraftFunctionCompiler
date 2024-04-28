@@ -2,7 +2,6 @@ import ast
 import json
 import os
 import sys
-import traceback
 import warnings
 from collections import OrderedDict
 from itertools import zip_longest
@@ -27,6 +26,8 @@ from ScoreboardTools import SB_CONSTANT
 from ScoreboardTools import SB_Name2Code
 from ScoreboardTools import SB_OP
 from ScoreboardTools import SB_RESET
+from Template import check_template
+from Template import init_template
 from Template import template_funcs
 
 SB_ARGS: str = ScoreBoards.Args
@@ -118,34 +119,6 @@ def node_to_namespace(node, namespace: str) -> tuple[str, str | None, str | None
         )
 
     raise Exception("暂时不支持的节点类型")
-
-
-def check_template(file_path: str) -> bool:
-    import re
-    c = re.compile(r"#\s*MCFC:\s*(.*)")
-
-    with open(file_path, mode='r', encoding="utf-8") as f:
-        for line in f:
-            if not line.startswith("#"):
-                continue
-
-            res = c.match(line)
-            if (res is not None) and (res.group(1).lower() == "template"):
-                return True
-
-    return False
-
-
-def init_template(name: str) -> None:
-    import importlib
-    module = importlib.import_module(name)
-    try:
-        module.init()
-    except AttributeError:
-        pass
-    except Exception as err:
-        traceback.print_exception(err)
-        print(f"Template:模板 {name} 初始化失败", file=sys.stderr)
 
 
 def generate_code(node, namespace: str) -> str:
