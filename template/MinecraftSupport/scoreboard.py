@@ -7,8 +7,7 @@ from Constant import ResultExt
 from Constant import ScoreBoards
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_CONSTANT
-from ScoreboardTools import SB_Code2Name
-from ScoreboardTools import SB_Name2Code
+from ScoreboardTools import init_name
 from Template import NameNode
 from Template import register_func
 
@@ -33,14 +32,6 @@ def _get_default(self: dict, key: str, default):
         return default
 
 
-def _init_scoreboard(name, objective):
-    if objective not in SB_Name2Code:
-        SB_Name2Code[objective] = {}
-        SB_Code2Name[objective] = {}
-    SB_Name2Code[objective][name] = name
-    SB_Code2Name[objective][name] = name
-
-
 def _get_score(name: str, objective: str):
     return _get_default(SB_MAP[objective], name, 0)
 
@@ -60,7 +51,7 @@ def get_score(name: str, objective: str, *, namespace: str = None):
 
     command = ''
 
-    _init_scoreboard(name, objective)
+    init_name(name, objective)
     command += SB_ASSIGN(
         f"{namespace}{ResultExt}", ScoreBoards.Temp,
         name, objective
@@ -96,6 +87,7 @@ def write_score(name: str, objective: str, value: int, *, namespace: str):
     else:
         raise TypeError("value must be NameNode or int")
 
+    init_name(name, objective)
     command += SB_ASSIGN(
         name, objective,
         f"{namespace}{ResultExt}", ScoreBoards.Temp
