@@ -8,6 +8,7 @@ import ast
 import functools
 import inspect
 import re
+import sys
 import traceback
 
 from Constant import ResultExt
@@ -35,6 +36,9 @@ class NameNode:
 
     def toJson(self):
         return {"score": {"name": f"{self.code}", "objective": ScoreBoards.Vars}}
+
+    def __str__(self):
+        return f"{type(self).__name__}({self.name=}, {self.namespace=})"
 
 
 def _parse_node(node, namespace: str):
@@ -122,11 +126,28 @@ def init_template(name: str) -> None:
         print(f"Template:模板 {name} 初始化失败", file=sys.stderr)
 
 
+class CommandResult:
+    def __init__(self, *other, success: bool, result: int = None):
+        self.success = success
+        if not success:
+            result = 0
+        elif result is None:
+            # 如果执行成功就必须传入值
+            raise ValueError("result must be set")
+        self.result = result
+        self.other = other
+
+    def __str__(self):
+        return f"{type(self).__name__}({self.success=}, {self.result=}, {self.other=})"
+
+
 __all__ = (
     "NameNode",
     "template_funcs",
     "register_func",
 
     "check_template",
-    "init_template"
+    "init_template",
+
+    "CommandResult",
 )
