@@ -20,6 +20,7 @@ from ParameterTypes import UnnecessaryParameter
 from ParameterTypes import func_args
 from ScoreboardTools import CHECK_SB
 from ScoreboardTools import SBCheckType
+from ScoreboardTools import SBCompareType
 from ScoreboardTools import SBOperationType
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_CONSTANT
@@ -275,12 +276,14 @@ def generate_code(node, namespace: str) -> str:
         command += CHECK_SB(
             SBCheckType.UNLESS,
             f"{namespace}{ResultExt}", SB_TEMP,
+            SBCompareType.EQUAL,
             Flags.FALSE, SB_FLAGS,
             f"function {func_path}"
         )
         command += CHECK_SB(
             SBCheckType.IF,
             f"{namespace}{ResultExt}", SB_TEMP,
+            SBCompareType.EQUAL,
             Flags.FALSE, SB_FLAGS,
             f"function {func_path}-else"
         )
@@ -457,6 +460,7 @@ def generate_code(node, namespace: str) -> str:
             command += CHECK_SB(
                 SBCheckType.UNLESS,
                 f"{namespace}{ResultExt}", SB_TEMP,
+                SBCompareType.EQUAL,
                 Flags.FALSE, SB_FLAGS,
                 SB_ASSIGN(
                     f"{namespace}.*UnaryOp", SB_TEMP,
@@ -468,6 +472,7 @@ def generate_code(node, namespace: str) -> str:
             command += CHECK_SB(
                 SBCheckType.IF,
                 f"{namespace}{ResultExt}", SB_TEMP,
+                SBCompareType.EQUAL,
                 Flags.FALSE, SB_FLAGS,
                 SB_ASSIGN(
                     f"{namespace}.*UnaryOp", SB_TEMP,
@@ -521,6 +526,14 @@ def generate_code(node, namespace: str) -> str:
 
         command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
+        if len(node.ops) > 1:
+            raise Exception("暂时无法解析多个比较符")
+
+        command += SB_ASSIGN(
+            f"{namespace}.*CompareResult", SB_TEMP,
+            Flags.FALSE, SB_FLAGS
+        )
+
         for i, op in enumerate(node.ops):
             command += COMMENT(f"Compare:提取左值")
             command += SB_ASSIGN(
@@ -530,59 +543,45 @@ def generate_code(node, namespace: str) -> str:
 
             command += COMMENT(f"Compare:处理右值")
             command += generate_code(node.comparators[i], namespace)
-            if isinstance(op, ast.Eq):
-                command += COMMENT(f"Compare:运算", op="Eq(==)")
-                command += SB_OP(
-                    SBOperationType.SUBTRACT,
-                    f"{namespace}.*CompareCalculate", SB_TEMP,
-                    f"{namespace}{ResultExt}", SB_TEMP
-                )
 
-                command += CHECK_SB(
-                    SBCheckType.IF,
-                    f"{namespace}.*CompareCalculate", SB_TEMP,
-                    Flags.FALSE, SB_FLAGS,
-                    SB_ASSIGN(
-                        f"{namespace}.*CompareResult", SB_TEMP,
-                        Flags.TRUE, SB_FLAGS,
-                        line_break=False
-                    )
-                )
-                command += CHECK_SB(
-                    SBCheckType.UNLESS,
-                    f"{namespace}.*CompareCalculate", SB_TEMP,
-                    Flags.FALSE, SB_FLAGS,
-                    SB_ASSIGN(
-                        f"{namespace}.*CompareResult", SB_TEMP,
-                        Flags.FALSE, SB_FLAGS,
-                        line_break=False
-                    )
-                )
+            if isinstance(op, ast.Eq):
+                command += COMMENT(f"Compare:比较", op="Eq(==)")
+                check_type = SBCheckType.IF
+                check_op = SBCompareType.EQUAL
             elif isinstance(op, ast.NotEq):
                 command += COMMENT(f"Compare:比较", op="NotEq(!=)")
-
-                eq_node = ast.Compare(
-                    left=node.left,
-                    ops=[ast.Eq()],
-                    comparators=[node.comparators[i]]
-                )
-
-                command += generate_code(
-                    ast.UnaryOp(
-                        op=ast.Not(),
-                        operand=eq_node
-                    ),
-                    namespace
-                )
-
-                command += SB_ASSIGN(
-                    f"{namespace}.*CompareResult", SB_TEMP,
-                    f"{namespace}{ResultExt}", SB_TEMP
-                )
-
-                command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
+                check_type = SBCheckType.UNLESS
+                check_op = SBCompareType.EQUAL
+            elif isinstance(op, ast.Gt):
+                command += COMMENT(f"Compare:比较", op="Gt(>)")
+                check_type = SBCheckType.IF
+                check_op = SBCompareType.MORE
+            elif isinstance(op, ast.Lt):
+                command += COMMENT(f"Compare:比较", op="Lt(<)")
+                check_type = SBCheckType.IF
+                check_op = SBCompareType.LESS
+            elif isinstance(op, ast.GtE):
+                command += COMMENT(f"Compare:比较", op="GtE(>=)")
+                check_type = SBCheckType.IF
+                check_op = SBCompareType.MORE_EQUAL
+            elif isinstance(op, ast.LtE):
+                command += COMMENT(f"Compare:比较", op="LtE(<=)")
+                check_type = SBCheckType.IF
+                check_op = SBCompareType.LESS_EQUAL
             else:
                 raise Exception(f"无法解析的比较符 {op}")
+
+            command += CHECK_SB(
+                check_type,
+                f"{namespace}.*CompareCalculate", SB_TEMP,
+                check_op,
+                f"{namespace}{ResultExt}", SB_TEMP,
+                SB_ASSIGN(
+                    f"{namespace}.*CompareResult", SB_TEMP,
+                    Flags.TRUE, SB_FLAGS,
+                    line_break=False
+                )
+            )
             command += SB_RESET(f"{namespace}.*CompareCalculate", SB_TEMP)
 
         command += SB_RESET(f"{namespace}.*CompareLeft", SB_TEMP)
