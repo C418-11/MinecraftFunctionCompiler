@@ -23,6 +23,9 @@ def _init_flags(name,  objective):
         init_name(name, objective)
 
 
+IgnoreEncode: bool = False
+
+
 _UID = 0
 
 
@@ -38,6 +41,10 @@ def gen_code(name, objective):
 
     if objective == ScoreBoards.Flags:
         _init_flags(name, objective)
+        return name
+
+    if IgnoreEncode:
+        init_name(name, objective)
         return name
 
     _UID += 1
@@ -136,10 +143,10 @@ def SB_OP(
     :param line_break: 是否进行换行
     """
 
+    _init_flags(selector, objective)
     if selector in SB_Name2Code[objective]:
         selector = SB_Name2Code[objective][selector]
 
-    _init_flags(selector, objective)
     command = (
         f"scoreboard players operation "
         f"{gen_code(target_name, target_objective)} {target_objective} "
