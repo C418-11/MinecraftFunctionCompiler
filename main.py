@@ -122,10 +122,50 @@ def node_to_namespace(node, namespace: str) -> tuple[str, str | None, str | None
     raise Exception("暂时不支持的节点类型")
 
 
+ns_map: dict[str, dict[str, ...]] = {}
+
+
+def ns_setter(name, value, namespace):
+    try:
+        last_ns, last_name = namespace.rsplit('\\', 1)
+    except ValueError:
+        ns_map[namespace].update({name: {".__namespace__": value}})
+    else:
+        ns_map[last_ns][last_name].update(
+            {name: {".__namespace__": value}}
+        )
+
+
+def ns_getter(name, namespace):
+    def finder(_key, _map, _path) -> tuple[dict[str, ...], str]:
+        # 如果找到结果直接返回
+        if _key in _map:
+            return _map[_key], _path
+        else:
+            try:
+                last_path, last_name = _path.rsplit('\\', 1)
+            except ValueError:
+                last_path = _path
+                last_name = _key
+
+            try:
+                last_value = _map[last_path]
+            except KeyError:
+                # 找不到上一级就直接返回
+                return _map, last_path
+
+            # 如果找的到上一级就在上一级里面找
+            return finder(_key, finder(last_name, last_value, last_path)[0], _path)
+
+    ns_dict, ns_path = finder(name, ns_map, namespace)
+    return ns_dict[".__namespace__"], ns_path
+
+
 def generate_code(node, namespace: str) -> str:
     os.makedirs(namespace_path(namespace, ''), exist_ok=True)
 
     if isinstance(node, ast.Module):
+        ns_map[namespace] = {}
         import_module_map[root_namespace(namespace)] = {}
         from_import_map[root_namespace(namespace)] = {}
         with open(namespace_path(namespace, ".__module.mcfunction"), mode='w', encoding="utf-8") as f:
@@ -183,6 +223,7 @@ def generate_code(node, namespace: str) -> str:
                     UserWarning
                 )
             import_module_map[root_namespace(namespace)].update({as_name: n.name})
+            ns_map[namespace].update({as_name: {".__namespace__": new_namespace}})
 
             command += COMMENT(f"Import:导入模块", name=n.name, as_name=as_name)
             command += DEBUG_TEXT(
@@ -213,6 +254,7 @@ def generate_code(node, namespace: str) -> str:
 
     if isinstance(node, ast.FunctionDef):
         with open(namespace_path(namespace, f"{node.name}.mcfunction"), mode='w', encoding="utf-8") as f:
+            ns_map[namespace].update({node.name: {".__namespace__": f"{namespace}\\{node.name}"}})
             f.write(COMMENT(f"FunctionDef:函数头"))
             args = generate_code(node.args, f"{namespace}\\{node.name}")
             f.write(args)
@@ -220,6 +262,12 @@ def generate_code(node, namespace: str) -> str:
             for statement in node.body:
                 body = generate_code(statement, f"{namespace}\\{node.name}")
                 f.write(body)
+        return ''
+
+    if isinstance(node, ast.Global):
+        root_ns = join_base_ns(root_namespace(namespace))
+        for n in node.names:
+            ns_setter(n, f"{root_ns}.{n}", namespace)
         return ''
 
     if isinstance(node, ast.If):
@@ -297,6 +345,7 @@ def generate_code(node, namespace: str) -> str:
                 raise Exception("无法解析的默认值")
 
             init_name(f"{namespace}.{name}", SB_ARGS)
+            ns_setter(name, f"{namespace}.{name}", namespace)
             command += SB_ASSIGN(
                 f"{namespace}.{name}", SB_VARS,
                 f"{namespace}.{name}", SB_ARGS
@@ -319,9 +368,10 @@ def generate_code(node, namespace: str) -> str:
         assert isinstance(node.ctx, ast.Load)
         command = ''
         command += COMMENT(f"Name:读取变量", name=node.id)
+        target_ns, _ = ns_getter(node.id, namespace)
         command += SB_ASSIGN(
             f"{namespace}{ResultExt}", SB_TEMP,
-            f"{namespace}.{node.id}", SB_VARS
+            f"{target_ns}", SB_VARS
         )
         return command
 
@@ -330,18 +380,18 @@ def generate_code(node, namespace: str) -> str:
         if not isinstance(node.value, ast.Name):
             raise Exception("暂时无法解析的值")
 
-        modules = import_module_map[root_namespace(namespace)]
+        base_namespace = ns_getter(node.value.id, namespace)[0]
+        attr_namespace = ns_getter(node.attr, base_namespace)[0]
 
-        if node.value.id not in modules:
-            print(node.value.id, modules)
-            raise Exception("暂时无法解析的属性")
+        command = ''
+        command += COMMENT(f"Attribute:读取属性", base_ns=base_namespace, attr=node.attr)
 
-        attr_namespace = join_base_ns(f"{modules[node.value.id]}.{node.attr}")
-
-        return SB_ASSIGN(
+        command += SB_ASSIGN(
             f"{namespace}{ResultExt}", SB_TEMP,
             f"{attr_namespace}", SB_VARS
         )
+
+        return command
 
     if isinstance(node, ast.Return):
         command = generate_code(node.value, namespace)
@@ -600,6 +650,7 @@ def generate_code(node, namespace: str) -> str:
             target_namespace = f"{root_ns}.{name}"
 
             command += COMMENT(f"Assign:将结果赋值给变量", name=name)
+            ns_setter(name, target_namespace, namespace)
             command += SB_ASSIGN(
                 target_namespace, SB_VARS,
                 namespace + ResultExt, SB_TEMP
@@ -618,29 +669,33 @@ def generate_code(node, namespace: str) -> str:
 
     if isinstance(node, ast.Call):
         func_name, func, ns = node_to_namespace(node.func, namespace)
+        commands: str = ''
 
         # 如果是python内置函数，则不需要加上命名空间
         if func_name in dir(__builtins__):
             func = f"python:built-in\\{func_name}"
 
-        commands: str = ''
+        # 如果是模版函数，则调用模版函数
+        elif f"{root_namespace(ns)}.{func_name}" in template_funcs:
+            func = template_funcs[f"{root_namespace(ns)}.{func_name}"]
+            commands += COMMENT(f"Template.Call:调用模板函数", func=func.__name__, namespace=root_namespace(ns))
+            commands += DEBUG_TEXT(
+                DebugTip.CallTemplate,
+                {"text": f"{func.__name__}", "color": "dark_purple"},
+                {"text": f"  "},
+                {"text": f"{root_namespace(ns)}", "color": "gray"}
+            )
+            commands += func(node.args, node.keywords, namespace=namespace)
+            commands += COMMENT(f"Template.Call:调用模版函数结束")
+            return commands
+        else:
+            func, ns = ns_getter(func_name, namespace)
+
         del_args: str = ''
 
         try:
             this_func_args = func_args[func]
         except KeyError:
-            if f"{root_namespace(ns)}.{func_name}" in template_funcs:
-                func = template_funcs[f"{root_namespace(ns)}.{func_name}"]
-                commands += COMMENT(f"Template.Call:调用模板函数", func=func.__name__, namespace=root_namespace(ns))
-                commands += DEBUG_TEXT(
-                    DebugTip.CallTemplate,
-                    {"text": f"{func.__name__}", "color": "dark_purple"},
-                    {"text": f"  "},
-                    {"text": f"{root_namespace(ns)}", "color": "gray"}
-                )
-                commands += func(node.args, node.keywords, namespace=namespace)
-                commands += COMMENT(f"Template.Call:调用模版函数结束")
-                return commands
             raise Exception(f"未注册过的函数: {func}")
 
         for name, value in zip_longest(this_func_args, node.args, fillvalue=None):
@@ -742,6 +797,9 @@ def main():
     print(f"[DEBUG] {template_funcs=}")
     print()
     print(f"[DEBUG] {SB_Name2Code=}")
+    print()
+    _dumped_ns_map = json.dumps(ns_map, indent=4)
+    print(f"[DEBUG] NamespaceMap={_dumped_ns_map}")
 
 
 if __name__ == "__main__":
