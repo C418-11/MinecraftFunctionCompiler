@@ -136,29 +136,30 @@ def ns_setter(name, value, namespace):
         )
 
 
-def ns_getter(name, namespace):
-    def finder(_key, _map, _path) -> tuple[dict[str, ...], str]:
-        # 如果找到结果直接返回
-        if _key in _map:
-            return _map[_key], _path
-        else:
-            try:
-                last_path, last_name = _path.rsplit('\\', 1)
-            except ValueError:
-                last_path = _path
-                last_name = _key
+def ns_getter(name, namespace: str) -> tuple[str, str]:
 
-            try:
-                last_value = _map[last_path]
-            except KeyError:
-                # 找不到上一级就直接返回
-                return _map, last_path
+    last_map: dict[str, ...] = ns_map
+    last_result: str | None = None
 
-            # 如果找的到上一级就在上一级里面找
-            return finder(_key, finder(last_name, last_value, last_path)[0], _path)
+    ns_ls: list[str] = []
+    last_ns: list[str] = []
 
-    ns_dict, ns_path = finder(name, ns_map, namespace)
-    return ns_dict[".__namespace__"], ns_path
+    for ns_name in namespace.split('\\'):
+        last_map = last_map[ns_name]
+        if name in last_map:
+            last_result = last_map[name][".__namespace__"]
+            last_ns = ns_ls
+
+        ns_ls.append(ns_name)
+
+    if name in last_map:
+        last_result = last_map[name][".__namespace__"]
+        last_ns = ns_ls
+
+    if last_result is None:
+        raise Exception(f"未在命名空间找到 {name}")
+
+    return last_result, '\\'.join(last_ns)
 
 
 def generate_code(node, namespace: str) -> str:
@@ -249,6 +250,7 @@ def generate_code(node, namespace: str) -> str:
                     UserWarning
                 )
             from_import_map[root_namespace(namespace)].update({as_name: (node.module, n.name)})
+            # ns_setter(as_name, f"{as_name}", namespace)
 
         return generate_code(ast.Import(names=[ast.alias(name=node.module, asname=None)]), namespace)
 
@@ -368,7 +370,7 @@ def generate_code(node, namespace: str) -> str:
         assert isinstance(node.ctx, ast.Load)
         command = ''
         command += COMMENT(f"Name:读取变量", name=node.id)
-        target_ns, _ = ns_getter(node.id, namespace)
+        target_ns = ns_getter(node.id, namespace)[0]
         command += SB_ASSIGN(
             f"{namespace}{ResultExt}", SB_TEMP,
             f"{target_ns}", SB_VARS
@@ -689,7 +691,7 @@ def generate_code(node, namespace: str) -> str:
             commands += COMMENT(f"Template.Call:调用模版函数结束")
             return commands
         else:
-            func, ns = ns_getter(func_name, namespace)
+            func, ns = ns_getter(func_name, ns)
 
         del_args: str = ''
 
