@@ -26,7 +26,7 @@ from ScoreboardTools import SB_CONSTANT
 from ScoreboardTools import SB_Name2Code
 from ScoreboardTools import SB_OP
 from ScoreboardTools import SB_RESET
-from ScoreboardTools import init_name
+from ScoreboardTools import gen_code
 from Template import check_template
 from Template import init_template
 from Template import template_funcs
@@ -346,7 +346,7 @@ def generate_code(node, namespace: str) -> str:
             else:
                 raise Exception("无法解析的默认值")
 
-            init_name(f"{namespace}.{name}", SB_ARGS)
+            gen_code(f"{namespace}.{name}", SB_ARGS)
             ns_setter(name, f"{namespace}.{name}", namespace)
             command += SB_ASSIGN(
                 f"{namespace}.{name}", SB_VARS,
