@@ -136,10 +136,18 @@ def ns_setter(name, value, namespace):
         )
 
 
-def ns_getter(name, namespace: str) -> tuple[str, str]:
+def ns_getter(name, namespace: str, ret_raw: bool = False) -> tuple[str | dict, str]:
 
-    last_map: dict[str, ...] = ns_map
-    last_result: str | None = None
+    """
+
+    :param name: 需要寻找的名称
+    :param namespace: 在那个命名空间下进行寻找
+    :param ret_raw: 是否直接返回源字典
+    :return: 当ret_raw为True时直接返回源字典，否则返回所找到的完整命名空间
+    """
+
+    last_map: dict[str, dict[str, ...]] = ns_map
+    last_result: dict | None = None
 
     ns_ls: list[str] = []
     last_ns: list[str] = []
@@ -147,17 +155,20 @@ def ns_getter(name, namespace: str) -> tuple[str, str]:
     for ns_name in namespace.split('\\'):
         last_map = last_map[ns_name]
         if name in last_map:
-            last_result = last_map[name][".__namespace__"]
+            last_result = last_map[name]
             last_ns = ns_ls
 
         ns_ls.append(ns_name)
 
     if name in last_map:
-        last_result = last_map[name][".__namespace__"]
+        last_result = last_map[name]
         last_ns = ns_ls
 
     if last_result is None:
         raise Exception(f"未在命名空间找到 {name}")
+
+    if not ret_raw:
+        last_result = last_result[".__namespace__"]
 
     return last_result, '\\'.join(last_ns)
 
