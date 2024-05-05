@@ -364,6 +364,8 @@ def generate_code(node, namespace: str) -> str:
                 f"{namespace}.{name}", SB_ARGS
             )
 
+            command += SB_RESET(f"{namespace}.{name}", SB_ARGS)
+
             command += DEBUG_OBJECTIVE(
                 DebugTip.Set,
                 objective=SB_VARS, name=f"{namespace}.{name}",
@@ -704,8 +706,6 @@ def generate_code(node, namespace: str) -> str:
         else:
             func, ns = ns_getter(func_name, ns)
 
-        del_args: str = ''
-
         try:
             this_func_args = func_args[func]
         except KeyError:
@@ -748,16 +748,10 @@ def generate_code(node, namespace: str) -> str:
 
             commands += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
-            # 删除已经使用过的参数
-            del_args += COMMENT(f"Call:重置参数", name=name)
-            del_args += DEBUG_OBJECTIVE(DebugTip.DelArg, objective=SB_ARGS, name=f"{func}.{name}")
-            del_args += SB_RESET(f"{func}.{name}", SB_ARGS)
-
         func = func.replace('\\', '/')
 
         commands += DEBUG_TEXT(DebugTip.Call, {"text": f"{func}", "color": "dark_purple"})
         commands += f"function {func}\n"
-        commands += del_args
 
         # 如果根命名空间不一样，需要去额外处理返回值
         if ns != namespace:
