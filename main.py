@@ -27,6 +27,7 @@ from ScoreboardTools import SB_Name2Code
 from ScoreboardTools import SB_OP
 from ScoreboardTools import SB_RESET
 from ScoreboardTools import gen_code
+from ScoreboardTools import init_name
 from Template import check_template
 from Template import init_template
 from Template import template_funcs
@@ -125,15 +126,21 @@ def node_to_namespace(node, namespace: str) -> tuple[str, str | None, str | None
 ns_map: dict[str, dict[str, ...]] = {}
 
 
-def ns_setter(name, value, namespace):
+def ns_setter(name: str, targe_namespace: str, namespace: str, _type: str = None) -> None:
+
+    data = {
+        name: {
+            ".__namespace__": targe_namespace,
+            ".__type__": _type
+        }
+    }
+
     try:
         last_ns, last_name = namespace.rsplit('\\', 1)
     except ValueError:
-        ns_map[namespace].update({name: {".__namespace__": value}})
+        ns_map[namespace].update(data)
     else:
-        ns_map[last_ns][last_name].update(
-            {name: {".__namespace__": value}}
-        )
+        ns_map[last_ns][last_name].update(data)
 
 
 def ns_getter(name, namespace: str, ret_raw: bool = False) -> tuple[str | dict, str]:
@@ -235,7 +242,7 @@ def generate_code(node, namespace: str) -> str:
                     UserWarning
                 )
             import_module_map[root_namespace(namespace)].update({as_name: n.name})
-            ns_map[namespace].update({as_name: {".__namespace__": new_namespace}})
+            ns_map[namespace].update({as_name: {".__namespace__": new_namespace, ".__type__": "module"}})
 
             command += COMMENT(f"Import:导入模块", name=n.name, as_name=as_name)
             command += DEBUG_TEXT(
@@ -267,7 +274,13 @@ def generate_code(node, namespace: str) -> str:
 
     if isinstance(node, ast.FunctionDef):
         with open(namespace_path(namespace, f"{node.name}.mcfunction"), mode='w', encoding="utf-8") as f:
-            ns_map[namespace].update({node.name: {".__namespace__": f"{namespace}\\{node.name}"}})
+            ns_map[namespace].update({
+                node.name: {
+                    ".__namespace__": f"{namespace}\\{node.name}",
+                    ".__type__": "function"
+                }
+            })
+
             f.write(COMMENT(f"FunctionDef:函数头"))
             args = generate_code(node.args, f"{namespace}\\{node.name}")
             f.write(args)
@@ -280,7 +293,7 @@ def generate_code(node, namespace: str) -> str:
     if isinstance(node, ast.Global):
         root_ns = join_base_ns(root_namespace(namespace))
         for n in node.names:
-            ns_setter(n, f"{root_ns}.{n}", namespace)
+            ns_setter(n, f"{root_ns}.{n}", namespace, "variable")
         return ''
 
     if isinstance(node, ast.If):
@@ -358,7 +371,7 @@ def generate_code(node, namespace: str) -> str:
                 raise Exception("无法解析的默认值")
 
             gen_code(f"{namespace}.{name}", SB_ARGS)
-            ns_setter(name, f"{namespace}.{name}", namespace)
+            ns_setter(name, f"{namespace}.{name}", namespace, "variable")
             command += SB_ASSIGN(
                 f"{namespace}.{name}", SB_VARS,
                 f"{namespace}.{name}", SB_ARGS
@@ -665,7 +678,7 @@ def generate_code(node, namespace: str) -> str:
             target_namespace = f"{root_ns}.{name}"
 
             command += COMMENT(f"Assign:将结果赋值给变量", name=name)
-            ns_setter(name, target_namespace, namespace)
+            ns_setter(name, target_namespace, namespace, "variable")
             command += SB_ASSIGN(
                 target_namespace, SB_VARS,
                 namespace + ResultExt, SB_TEMP
@@ -687,8 +700,10 @@ def generate_code(node, namespace: str) -> str:
         commands: str = ''
 
         # 如果是python内置函数，则不需要加上命名空间
+        is_builtin: bool = False
         if func_name in dir(__builtins__):
             func = f"python:built-in\\{func_name}"
+            is_builtin = True
 
         # 如果是模版函数，则调用模版函数
         elif f"{root_namespace(ns)}.{func_name}" in template_funcs:
@@ -734,6 +749,8 @@ def generate_code(node, namespace: str) -> str:
             commands += generate_code(value, namespace)
 
             commands += COMMENT(f"Call:传递参数", name=name)
+            if is_builtin:
+                init_name(f"{func}.{name}", SB_ARGS)
             commands += SB_ASSIGN(
                 f"{func}.{name}", SB_ARGS,
                 f"{namespace}{ResultExt}", SB_TEMP
