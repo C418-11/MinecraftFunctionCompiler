@@ -39,6 +39,7 @@ SB_TEMP: str = ScoreBoards.Temp
 SB_FLAGS: str = ScoreBoards.Flags
 SB_INPUT: str = ScoreBoards.Input
 SB_VARS: str = ScoreBoards.Vars
+SB_FUNC_RESULT: str = ScoreBoards.FuncResult
 
 DS_ROOT: str = DataStorageRoot
 DS_TEMP: str = DataStorages.Temp
@@ -485,18 +486,23 @@ def generate_code(node, namespace: str) -> str:
     if isinstance(node, ast.Return):
         command = generate_code(node.value, namespace)
 
-        father_namespace = '\\'.join(namespace.split('\\')[:-1])
+        command += COMMENT(f"Return:保存返回值")
 
-        command += COMMENT(f"Return:将返回值传递给父命名空间")
+        ns, name = namespace.split('\\', 1)
+        func_map: dict = ns_getter(name, ns, ret_raw=True)[0]
+        if func_map[".__type__"] != "function":
+            raise Exception("返回语句不在函数内")
+
+        func_name = func_map[".__namespace__"]
 
         command += SB_ASSIGN(
-            f"{father_namespace}{ResultExt}", SB_TEMP,
+            f"{func_name}", SB_FUNC_RESULT,
             f"{namespace}{ResultExt}", SB_TEMP
         )
 
         command += DEBUG_OBJECTIVE(
             DebugTip.Result,
-            objective=SB_TEMP, name=f"{father_namespace}{ResultExt}",
+            objective=SB_FUNC_RESULT, name=f"{func_name}{ResultExt}",
             from_objective=SB_TEMP, from_name=f"{namespace}{ResultExt}"
         )
         command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
@@ -758,46 +764,46 @@ def generate_code(node, namespace: str) -> str:
         return command
 
     if isinstance(node, ast.Call):
-        func_name, func, ns = node_to_namespace(node.func, namespace)
+        func_name, func_ns, ns = node_to_namespace(node.func, namespace)
         commands: str = ''
 
         # 如果是python内置函数，则不需要加上命名空间
         is_builtin: bool = False
         if func_name in dir(__builtins__):
-            func = f"python:built-in\\{func_name}"
+            func_ns = f"python:built-in\\{func_name}"
             is_builtin = True
 
         # 如果是模版函数，则调用模版函数
         elif f"{root_namespace(ns)}.{func_name}" in template_funcs:
-            func = template_funcs[f"{root_namespace(ns)}.{func_name}"]
-            commands += COMMENT(f"Template.Call:调用模板函数", func=func.__name__, namespace=root_namespace(ns))
+            func_ns = template_funcs[f"{root_namespace(ns)}.{func_name}"]
+            commands += COMMENT(f"Template.Call:调用模板函数", func=func_ns.__name__, namespace=root_namespace(ns))
             commands += DEBUG_TEXT(
                 DebugTip.CallTemplate,
-                {"text": f"{func.__name__}", "color": "dark_purple"},
+                {"text": f"{func_ns.__name__}", "color": "dark_purple"},
                 {"text": f"  "},
                 {"text": f"{root_namespace(ns)}", "color": "gray"}
             )
-            commands += func(node.args, node.keywords, namespace=namespace)
+            commands += func_ns(node.args, node.keywords, namespace=namespace)
             commands += COMMENT(f"Template.Call:调用模版函数结束")
             return commands
         else:
-            func, ns = ns_getter(func_name, ns)
+            func_ns, ns = ns_getter(func_name, ns)
 
         try:
-            this_func_args = func_args[func]
+            this_func_args = func_args[func_ns]
         except KeyError:
-            raise Exception(f"未注册过的函数: {func}")
+            raise Exception(f"未注册过的函数: {func_ns}")
 
         for name, value in zip_longest(this_func_args, node.args, fillvalue=None):
             if name is None:
                 json_value = ast.dump(value)
-                raise SyntaxError(f"函数 {func} 在调用时传入了额外的值 {json_value}")
+                raise SyntaxError(f"函数 {func_ns} 在调用时传入了额外的值 {json_value}")
 
             # 如果参数未提供值，且不是默认值，则报错
             # 否者，使用默认值
             if value is None:
                 if not isinstance(this_func_args[name], DefaultArgType):
-                    raise SyntaxError(f"函数 {func} 的参数 {name} 未提供值")
+                    raise SyntaxError(f"函数 {func_ns} 的参数 {name} 未提供值")
 
                 default_value = this_func_args[name].default
 
@@ -812,49 +818,39 @@ def generate_code(node, namespace: str) -> str:
 
             commands += COMMENT(f"Call:传递参数", name=name)
             if is_builtin:
-                init_name(f"{func}.{name}", SB_ARGS)
+                init_name(f"{func_ns}.{name}", SB_ARGS)
             commands += SB_ASSIGN(
-                f"{func}.{name}", SB_ARGS,
+                f"{func_ns}.{name}", SB_ARGS,
                 f"{namespace}{ResultExt}", SB_TEMP
             )
 
             commands += DEBUG_OBJECTIVE(
                 DebugTip.SetArg,
-                objective=SB_ARGS, name=f"{func}.{name}",
+                objective=SB_ARGS, name=f"{func_ns}.{name}",
                 from_objective=SB_TEMP, from_name=f"{namespace}{ResultExt}"
             )
             commands += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
 
             commands += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
-        func = func.replace('\\', '/')
+        func_path = func_ns.replace('\\', '/')
 
-        commands += DEBUG_TEXT(DebugTip.Call, {"text": f"{func}", "color": "dark_purple"})
+        commands += DEBUG_TEXT(DebugTip.Call, {"text": f"{func_path}", "color": "dark_purple"})
         # 当在函数中调用函数时
         if namespace != join_base_ns(root_namespace(namespace)):
             store, load = store_local(namespace)
             commands += store
-            commands += f"function {func}\n"
+            commands += f"function {func_path}\n"
             commands += load
         else:
-            commands += f"function {func}\n"
+            commands += f"function {func_path}\n"
 
-        # 如果根命名空间不一样，需要去额外处理返回值
-        if ns != namespace:
-            commands += COMMENT(f"Call:跨命名空间读取返回值")
-            commands += SB_ASSIGN(
-                f"{namespace}{ResultExt}", SB_TEMP,
-                f"{ns}{ResultExt}", SB_TEMP
-            )
-
-            commands += DEBUG_OBJECTIVE(
-                DebugTip.Result,
-                objective=SB_TEMP, name=f"{namespace}{ResultExt}",
-                from_objective=SB_TEMP, from_name=f"{ns}{ResultExt}"
-            )
-            commands += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{ns}{ResultExt}")
-
-            commands += SB_RESET(f"{ns}{ResultExt}", SB_TEMP)
+        gen_code(f"{func_ns}", SB_FUNC_RESULT)
+        commands += SB_ASSIGN(
+            f"{namespace}{ResultExt}", SB_TEMP,
+            f"{func_ns}", SB_FUNC_RESULT
+        )
+        commands += SB_RESET(f"{func_ns}", SB_FUNC_RESULT)
 
         return commands
 
@@ -874,7 +870,7 @@ def main():
     TEMPLATE_PATH = "./template"
 
     BASE_NAMESPACE = "source_code:"
-    file_name = "scoreboard_op"
+    file_name = "recursive_call"
 
     with open(os.path.join(READ_PATH, f"{file_name}.py"), mode='r', encoding="utf-8") as _:
         tree = ast.parse(_.read())
