@@ -11,11 +11,12 @@ ResultExt = ".?Result"
 
 
 class ScoreBoards:
-    Args = "Python.Args"
-    Temp = "Python.Temp"
-    Flags = "Python.Flags"
-    Input = "Python.Input"
-    Vars = "Python.Vars"
+    Args = "Py.Args"
+    Temp = "Py.Temp"
+    Flags = "Py.Flags"
+    Input = "Py.Input"
+    Vars = "Py.Vars"
+    FuncResult = "Py.FuncResult"
 
 
 DataStorageRoot = "python"
@@ -68,6 +69,7 @@ SCOREBOARDS_PLACEHOLDER_MAP = {
     "SB:Flags": ScoreBoards.Flags,
     "SB:Input": ScoreBoards.Input,
     "SB:Vars": ScoreBoards.Vars,
+    "SB:FuncResult": ScoreBoards.FuncResult,
 }
 
 DATA_STORAGES_PLACEHOLDER_MAP = {

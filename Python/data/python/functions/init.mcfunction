@@ -8,5 +8,6 @@ scoreboard players set False ${SB:Flags} 0
 scoreboard players set Neg ${SB:Flags} -1
 scoreboard players set DEBUG ${SB:Flags} 0
 scoreboard objectives add ${SB:Input} trigger
+scoreboard objectives add ${SB:FuncResult} dummy
 data modify storage ${DS:Root} ${DS:LocalVars} set value []
 tellraw @a { "text": "" , "extra": [ ${RAWJSON:Prefix}, { "text": " ${CHAT:InitializationComplete}" }], "color": "gold", ${RAWJSON.HoverEvent:Author} }
