@@ -6,6 +6,8 @@ import warnings
 from collections import OrderedDict
 from itertools import zip_longest
 
+from Constant import DataStorageRoot
+from Constant import DataStorages
 from Constant import Flags
 from Constant import ResultExt
 from Constant import ScoreBoards
@@ -37,6 +39,10 @@ SB_TEMP: str = ScoreBoards.Temp
 SB_FLAGS: str = ScoreBoards.Flags
 SB_INPUT: str = ScoreBoards.Input
 SB_VARS: str = ScoreBoards.Vars
+
+DS_ROOT: str = DataStorageRoot
+DS_TEMP: str = DataStorages.Temp
+DS_LOCAL_VARS: str = DataStorages.LocalVars
 
 SAVE_PATH: None | str = None
 READ_PATH: None | str = None
@@ -178,6 +184,61 @@ def ns_getter(name, namespace: str, ret_raw: bool = False) -> tuple[str | dict, 
         last_result = last_result[".__namespace__"]
 
     return last_result, '\\'.join(last_ns)
+
+
+def store_local(namespace: str) -> tuple[str, str]:
+    _ns, _name = namespace.split('\\', 1)
+    local_ns: dict[str, dict[str, ...]] = ns_getter(_name, _ns, ret_raw=True)[0]
+
+    ns_ls: list[str] = []
+
+    for name in local_ns:
+        if name.startswith("."):
+            continue
+        data = local_ns[name]
+        if data[".__type__"] != "variable":
+            continue
+        ns_ls.append(data[".__namespace__"])
+
+    def store() -> str:
+        nonlocal ns_ls
+        command = ''
+        command += COMMENT("LocalVars.Store")
+        for ns in ns_ls:
+            command += (
+                f"execute store result storage "
+                f"{DS_ROOT} {DS_TEMP} "
+                f"int 1 "
+                f"run scoreboard players get {SB_Name2Code[SB_VARS][ns]} {SB_VARS}\n"
+            )
+            command += (
+                f"data modify storage "
+                f"{DS_ROOT} {DS_LOCAL_VARS} "
+                f"append from storage "
+                f"{DS_ROOT} {DS_TEMP}\n"
+            )
+
+        return command
+
+    def load() -> str:
+        nonlocal ns_ls
+        command = ''
+        command += COMMENT("LocalVars.Load")
+        for ns in ns_ls[::-1]:
+            command += (
+                f"execute store result score "
+                f"{SB_Name2Code[SB_VARS][ns]} {SB_VARS} "
+                f"run data get storage "
+                f"{DS_ROOT} {DS_LOCAL_VARS}[-1] 1\n"
+            )
+            command += (
+                f"data remove storage "
+                f"{DS_ROOT} {DS_LOCAL_VARS}[-1]\n"
+            )
+
+        return command
+
+    return store(), load()
 
 
 def generate_code(node, namespace: str) -> str:
@@ -671,6 +732,7 @@ def generate_code(node, namespace: str) -> str:
 
     if isinstance(node, ast.Assign):
         command = generate_code(node.value, namespace)
+        from_namespace = f"{namespace}{ResultExt}"
 
         for t in node.targets:
             name, _, root_ns = node_to_namespace(t, namespace)
@@ -681,17 +743,17 @@ def generate_code(node, namespace: str) -> str:
             ns_setter(name, target_namespace, namespace, "variable")
             command += SB_ASSIGN(
                 target_namespace, SB_VARS,
-                namespace + ResultExt, SB_TEMP
+                from_namespace, SB_TEMP
             )
 
             command += DEBUG_OBJECTIVE(
                 DebugTip.Assign,
                 objective=SB_VARS, name=f"{target_namespace}",
-                from_objective=SB_TEMP, from_name=f"{namespace}{ResultExt}"
+                from_objective=SB_TEMP, from_name=f"{from_namespace}"
             )
-            command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
+            command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{from_namespace}")
 
-            command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
+            command += SB_RESET(f"{from_namespace}", SB_TEMP)
 
         return command
 
@@ -768,7 +830,14 @@ def generate_code(node, namespace: str) -> str:
         func = func.replace('\\', '/')
 
         commands += DEBUG_TEXT(DebugTip.Call, {"text": f"{func}", "color": "dark_purple"})
-        commands += f"function {func}\n"
+        # 当在函数中调用函数时
+        if namespace != join_base_ns(root_namespace(namespace)):
+            store, load = store_local(namespace)
+            commands += store
+            commands += f"function {func}\n"
+            commands += load
+        else:
+            commands += f"function {func}\n"
 
         # 如果根命名空间不一样，需要去额外处理返回值
         if ns != namespace:
