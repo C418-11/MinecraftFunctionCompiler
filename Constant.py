@@ -18,6 +18,14 @@ class ScoreBoards:
     Vars = "Python.Vars"
 
 
+DataStorageRoot = "python"
+
+
+class DataStorages:
+    Temp = "temporary"
+    LocalVars = "LocalVars"
+
+
 class RawJsons:
     Prefix = {
         "text": "[Python]",
@@ -62,6 +70,13 @@ SCOREBOARDS_PLACEHOLDER_MAP = {
     "SB:Vars": ScoreBoards.Vars,
 }
 
+DATA_STORAGES_PLACEHOLDER_MAP = {
+    "DS:Root": DataStorageRoot,
+
+    "DS:Temp": DataStorages.Temp,
+    "DS:LocalVars": DataStorages.LocalVars,
+}
+
 BUILTIN_PLACEHOLDER_MAP = {
     "BuiltIn:print": "打印: ",
     "BuiltIn:input.TIP": "输入: ",
@@ -103,6 +118,7 @@ RAWJSON_PLACEHOLDER_MAP = {
 
 PLACEHOLDER_MAP = {
     **SCOREBOARDS_PLACEHOLDER_MAP,
+    **DATA_STORAGES_PLACEHOLDER_MAP,
     **BUILTIN_PLACEHOLDER_MAP,
     **CHAT_PLACEHOLDER_MAP,
     **RAWJSON_PLACEHOLDER_MAP,
@@ -112,6 +128,8 @@ __all__ = (
     "DECIMAL_PRECISION",
     "ResultExt",
     "ScoreBoards",
+    "DataStorageRoot",
+    "DataStorages",
     "RawJsons",
     "Flags",
     "PLACEHOLDER_MAP",
