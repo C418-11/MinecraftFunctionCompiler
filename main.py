@@ -44,6 +44,7 @@ SB_FUNC_RESULT: str = ScoreBoards.FuncResult
 DS_ROOT: str = DataStorageRoot
 DS_TEMP: str = DataStorages.Temp
 DS_LOCAL_VARS: str = DataStorages.LocalVars
+DS_LOCAL_TEMP: str = DataStorages.LocalTemp
 
 SAVE_PATH: None | str = None
 READ_PATH: None | str = None
@@ -130,7 +131,7 @@ def node_to_namespace(node, namespace: str) -> tuple[str, str | None, str | None
     raise Exception("暂时不支持的节点类型")
 
 
-ns_map: dict[str, dict[str, ...]] = {}
+ns_map: OrderedDict[str, OrderedDict[str, ...]] = OrderedDict()
 
 
 def ns_setter(name: str, targe_namespace: str, namespace: str, _type: str = None) -> None:
@@ -187,6 +188,9 @@ def ns_getter(name, namespace: str, ret_raw: bool = False) -> tuple[str | dict, 
     return last_result, '\\'.join(last_ns)
 
 
+temp_map: OrderedDict[str, list[str]] = OrderedDict()
+
+
 def store_local(namespace: str) -> tuple[str, str]:
     _ns, _name = namespace.split('\\', 1)
     local_ns: dict[str, dict[str, ...]] = ns_getter(_name, _ns, ret_raw=True)[0]
@@ -218,6 +222,20 @@ def store_local(namespace: str) -> tuple[str, str]:
                 f"append from storage "
                 f"{DS_ROOT} {DS_TEMP}\n"
             )
+        command += COMMENT("LocalTemp.Store")
+        for ns in temp_map[namespace]:
+            command += (
+                f"execute store result storage "
+                f"{DS_ROOT} {DS_TEMP} "
+                f"int 1 "
+                f"run scoreboard players get {SB_Name2Code[SB_TEMP][ns]} {SB_TEMP}\n"
+            )
+            command += (
+                f"data modify storage "
+                f"{DS_ROOT} {DS_LOCAL_TEMP} "
+                f"append from storage "
+                f"{DS_ROOT} {DS_TEMP}\n"
+            )
 
         return command
 
@@ -236,6 +254,18 @@ def store_local(namespace: str) -> tuple[str, str]:
                 f"data remove storage "
                 f"{DS_ROOT} {DS_LOCAL_VARS}[-1]\n"
             )
+        command += COMMENT("LocalTemp.Load")
+        for ns in temp_map[namespace][::-1]:
+            command += (
+                f"execute store result score "
+                f"{SB_Name2Code[SB_TEMP][ns]} {SB_TEMP} "
+                f"run data get storage "
+                f"{DS_ROOT} {DS_LOCAL_TEMP}[-1] 1\n"
+            )
+            command += (
+                f"data remove storage "
+                f"{DS_ROOT} {DS_LOCAL_TEMP}[-1]\n"
+            )
 
         return command
 
@@ -246,7 +276,7 @@ def generate_code(node, namespace: str) -> str:
     os.makedirs(namespace_path(namespace, ''), exist_ok=True)
 
     if isinstance(node, ast.Module):
-        ns_map[namespace] = {}
+        ns_map[namespace] = OrderedDict()
         import_module_map[root_namespace(namespace)] = {}
         from_import_map[root_namespace(namespace)] = {}
         with open(namespace_path(namespace, ".__module.mcfunction"), mode='w', encoding="utf-8") as f:
@@ -336,12 +366,8 @@ def generate_code(node, namespace: str) -> str:
 
     if isinstance(node, ast.FunctionDef):
         with open(namespace_path(namespace, f"{node.name}.mcfunction"), mode='w', encoding="utf-8") as f:
-            ns_map[namespace].update({
-                node.name: {
-                    ".__namespace__": f"{namespace}\\{node.name}",
-                    ".__type__": "function"
-                }
-            })
+            ns_setter(node.name, f"{namespace}\\{node.name}", namespace, "function")
+            temp_map[f"{namespace}\\{node.name}"] = []
 
             f.write(COMMENT(f"FunctionDef:函数头"))
             args = generate_code(node.args, f"{namespace}\\{node.name}")
@@ -528,6 +554,7 @@ def generate_code(node, namespace: str) -> str:
             f"{namespace}{process_ext}", SB_TEMP,
             f"{namespace}{ResultExt}", SB_TEMP
         )
+        temp_map[namespace].append(f"{namespace}{process_ext}")
         command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
         command += COMMENT(f"BinOp:处理右值")
@@ -572,6 +599,7 @@ def generate_code(node, namespace: str) -> str:
         command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{process_ext}")
 
         command += SB_RESET(f"{namespace}{process_ext}", SB_TEMP)
+        temp_map[namespace].remove(f"{namespace}{process_ext}")
 
         return command
 
@@ -892,10 +920,14 @@ def main():
     print()
     print(f"[DEBUG] {template_funcs=}")
     print()
-    print(f"[DEBUG] {SB_Name2Code=}")
+    _dumped_sb_name2code = json.dumps(SB_Name2Code, indent=4)
+    print(f"[DEBUG] SB_Name2Code={_dumped_sb_name2code}")
     print()
     _dumped_ns_map = json.dumps(ns_map, indent=4)
     print(f"[DEBUG] NamespaceMap={_dumped_ns_map}")
+    print()
+    _dumped_temp_map = json.dumps(temp_map, indent=4)
+    print(f"[DEBUG] TemplateScoreboardVariableMap={_dumped_temp_map}")
 
 
 if __name__ == "__main__":

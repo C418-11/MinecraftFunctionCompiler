@@ -13,9 +13,7 @@ def factorial(n):
     if n == 0:
         return 1
     else:
-        # 不写在一行是因为当前底层实现方式BinOp嵌套会覆盖值
-        result = factorial(n - 1)
-        return n * result
+        return n * factorial(n-1)
 
 
 # 测试
