@@ -25,6 +25,7 @@ DataStorageRoot = "python"
 class DataStorages:
     Temp = "temporary"
     LocalVars = "LocalVars"
+    LocalTemp = "LocalTemp"
 
 
 class RawJsons:
@@ -77,6 +78,7 @@ DATA_STORAGES_PLACEHOLDER_MAP = {
 
     "DS:Temp": DataStorages.Temp,
     "DS:LocalVars": DataStorages.LocalVars,
+    "DS:LocalTemp": DataStorages.LocalTemp,
 }
 
 BUILTIN_PLACEHOLDER_MAP = {

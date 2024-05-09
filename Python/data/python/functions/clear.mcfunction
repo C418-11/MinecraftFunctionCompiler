@@ -7,4 +7,5 @@ scoreboard objectives remove ${SB:Vars}
 scoreboard objectives remove ${SB:FuncResult}
 data remove storage ${DS:Root} ${DS:Temp}
 data remove storage ${DS:Root} ${DS:LocalVars}
+data remove storage ${DS:Root} ${DS:LocalTemp}
 tellraw @a { "text": "" , "extra": [ ${RAWJSON:Prefix}, { "text": " ${CHAT:DataClearingComplete}" }], "color": "gold", ${RAWJSON.HoverEvent:Author} }
