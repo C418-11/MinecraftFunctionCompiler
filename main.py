@@ -75,7 +75,7 @@ def root_namespace(namespace: str) -> str:
     return namespace.split(":", 1)[1].split('\\')[0]
 
 
-Uid = 9
+Uid = 0
 
 
 def newUid() -> str:
@@ -484,9 +484,11 @@ def generate_code(node, namespace: str) -> str:
         return command
 
     if isinstance(node, ast.Return):
-        command = generate_code(node.value, namespace)
+        command = ''
+        command += COMMENT("Return:计算返回值")
+        command += generate_code(node.value, namespace)
 
-        command += COMMENT(f"Return:保存返回值")
+        command += COMMENT("Return:保存返回值")
 
         ns, name = namespace.split('\\', 1)
         func_map: dict = ns_getter(name, ns, ret_raw=True)[0]
@@ -518,8 +520,12 @@ def generate_code(node, namespace: str) -> str:
         command += COMMENT(f"BinOp:处理左值")
         command += generate_code(node.left, namespace)
 
+        process_uid = newUid()
+
+        process_ext = f".*BinOp{process_uid}"
+
         command += SB_ASSIGN(
-            f"{namespace}.*BinOp", SB_TEMP,
+            f"{namespace}{process_ext}", SB_TEMP,
             f"{namespace}{ResultExt}", SB_TEMP
         )
         command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
@@ -530,25 +536,25 @@ def generate_code(node, namespace: str) -> str:
         if isinstance(node.op, ast.Add):
             command += SB_OP(
                 SBOperationType.ADD,
-                f"{namespace}.*BinOp", SB_TEMP,
+                f"{namespace}{process_ext}", SB_TEMP,
                 f"{namespace}{ResultExt}", SB_TEMP
             )
         elif isinstance(node.op, ast.Sub):
             command += SB_OP(
                 SBOperationType.SUBTRACT,
-                f"{namespace}.*BinOp", SB_TEMP,
+                f"{namespace}{process_ext}", SB_TEMP,
                 f"{namespace}{ResultExt}", SB_TEMP
             )
         elif isinstance(node.op, ast.Mult):
             command += SB_OP(
                 SBOperationType.MULTIPLY,
-                f"{namespace}.*BinOp", SB_TEMP,
+                f"{namespace}{process_ext}", SB_TEMP,
                 f"{namespace}{ResultExt}", SB_TEMP
             )
         elif isinstance(node.op, ast.Div):
             command += SB_OP(
                 SBOperationType.DIVIDE,
-                f"{namespace}.*BinOp", SB_TEMP,
+                f"{namespace}{process_ext}", SB_TEMP,
                 f"{namespace}{ResultExt}", SB_TEMP
             )
         else:
@@ -559,13 +565,13 @@ def generate_code(node, namespace: str) -> str:
         command += COMMENT(f"BinOp:传递结果")
         command += SB_ASSIGN(
             f"{namespace}{ResultExt}", SB_TEMP,
-            f"{namespace}.*BinOp", SB_TEMP
+            f"{namespace}{process_ext}", SB_TEMP
         )
 
         command += DEBUG_OBJECTIVE(DebugTip.Calc, objective=SB_TEMP, name=f"{namespace}{ResultExt}")
-        command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}.*BinOp")
+        command += DEBUG_OBJECTIVE(DebugTip.Reset, objective=SB_TEMP, name=f"{namespace}{process_ext}")
 
-        command += SB_RESET(f"{namespace}.*BinOp", SB_TEMP)
+        command += SB_RESET(f"{namespace}{process_ext}", SB_TEMP)
 
         return command
 
@@ -814,9 +820,10 @@ def generate_code(node, namespace: str) -> str:
                 commands += COMMENT(f"Call:使用默认值", name=name, value=default_value)
                 value = ast.Constant(value=this_func_args[name].default)
 
+            commands += COMMENT("Call:计算参数值")
             commands += generate_code(value, namespace)
 
-            commands += COMMENT(f"Call:传递参数", name=name)
+            commands += COMMENT("Call:传递参数", name=name)
             if is_builtin:
                 init_name(f"{func_ns}.{name}", SB_ARGS)
             commands += SB_ASSIGN(
