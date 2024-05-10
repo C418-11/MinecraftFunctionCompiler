@@ -59,9 +59,6 @@ print_args = OrderedDict([
 ])
 
 func_args: dict[str, OrderedDict[str, ArgType | DefaultArgType]] = {
-    "python:built-in\\int": OrderedDict([
-        ('x', DefaultArgType('x', UnnecessaryParameter())),
-    ]),
     "python:built-in\\print": print_args,
 }
 

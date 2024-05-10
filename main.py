@@ -1,10 +1,10 @@
 import ast
 import json
 import os
-import sys
 import warnings
 from collections import OrderedDict
 from itertools import zip_longest
+from typing import Any
 
 from Constant import DataStorageRoot
 from Constant import DataStorages
@@ -85,47 +85,48 @@ def newUid() -> str:
     return hex(Uid)[2:]
 
 
-import_module_map: dict[str, dict[str, str]] = {}
-from_import_map: dict[str, dict[str, tuple[str, str]]] = {}
-
-
-def node_to_namespace(node, namespace: str) -> tuple[str, str | None, str | None]:
+def node_to_namespace(
+        node,
+        namespace: str,
+        *,
+        not_exists_ok: bool = False,
+        ns_type: str | None = None
+) -> tuple[str, str, str]:
     """
     :param node: AST节点
     :param namespace: 当前命名空间
+    :param not_exists_ok: 名称不存在时在当前命名空间下生成
+    :param ns_type: 自动生成时填入的命名空间类型
     :return: (name, full_namespace, root_namespace)
     """
 
-    if type(node) is str:
-        return node, None, None
-
     if isinstance(node, ast.Name):
-        from_modules = from_import_map[root_namespace(namespace)]
-        if node.id not in from_modules:
-            return node.id, f"{namespace}\\{node.id}", namespace
-
-        return node_to_namespace(
-            ast.Attribute(
-                value=from_modules[node.id][0],
-                attr=from_modules[node.id][1],
-                ctx=ast.Load()
-            ),
-            namespace
-        )
+        try:
+            ns, base_ns = ns_getter(node.id, namespace, ret_raw=True)
+        except KeyError:
+            if not not_exists_ok:
+                raise
+            ns_setter(node.id, namespace, namespace, ns_type)
+            ns, base_ns = ns_getter(node.id, namespace, ret_raw=True)
+        ns: dict[str, dict[str, ...] | str]
+        full_ns: str = ns[".__namespace__"]
+        if ns[".__type__"] == "attribute":
+            target_ns, name = full_ns.split("|", 1)
+            return node_to_namespace(
+                ast.Name(id=name), target_ns, not_exists_ok=not_exists_ok, ns_type=ns_type
+            )
+        return node.id, full_ns, base_ns
 
     if isinstance(node, ast.Attribute):
-        modules = import_module_map[root_namespace(namespace)]
-
-        node_value = node_to_namespace(node.value, namespace)[0]
-
-        if node_value not in modules:
-            print(node_value, modules, file=sys.stderr)
-            raise Exception("未导入模块")
+        if not isinstance(node.value, ast.Name):
+            raise Exception(f"暂时不支持的节点类型 '{type(node.value).__name__}'")
+        value_ns = ns_getter(node.value.id, namespace)[0]
+        full_ns = ns_getter(node.attr, value_ns)[0]
 
         return (
             node.attr,
-            join_base_ns(f"{modules[node_value]}\\{node.attr}"),
-            join_base_ns(f"{modules[node_value]}")
+            full_ns,
+            value_ns
         )
 
     raise Exception("暂时不支持的节点类型")
@@ -134,12 +135,11 @@ def node_to_namespace(node, namespace: str) -> tuple[str, str | None, str | None
 ns_map: OrderedDict[str, OrderedDict[str, ...]] = OrderedDict()
 
 
-def ns_setter(name: str, targe_namespace: str, namespace: str, _type: str = None) -> None:
-
+def ns_setter(name: str, targe_namespace: str, namespace: str, ns_type: str = None) -> None:
     data = {
         name: {
             ".__namespace__": targe_namespace,
-            ".__type__": _type
+            ".__type__": ns_type
         }
     }
 
@@ -152,7 +152,6 @@ def ns_setter(name: str, targe_namespace: str, namespace: str, _type: str = None
 
 
 def ns_getter(name, namespace: str, ret_raw: bool = False) -> tuple[str | dict, str]:
-
     """
 
     :param name: 需要寻找的名称
@@ -168,7 +167,10 @@ def ns_getter(name, namespace: str, ret_raw: bool = False) -> tuple[str | dict, 
     last_ns: list[str] = []
 
     for ns_name in namespace.split('\\'):
-        last_map = last_map[ns_name]
+        try:
+            last_map = last_map[ns_name]
+        except KeyError:
+            raise KeyError(f"{name} not found in namespace {namespace}")
         if name in last_map:
             last_result = last_map[name]
             last_ns = ns_ls
@@ -180,7 +182,7 @@ def ns_getter(name, namespace: str, ret_raw: bool = False) -> tuple[str | dict, 
         last_ns = ns_ls
 
     if last_result is None:
-        raise Exception(f"未在命名空间找到 {name}")
+        raise KeyError(f"{name} not found in namespace {namespace}")
 
     if not ret_raw:
         last_result = last_result[".__namespace__"]
@@ -272,13 +274,68 @@ def store_local(namespace: str) -> tuple[str, str]:
     return store(), load()
 
 
+def import_as(name: str, as_name: str | None, namespace: str, *, register_ns: bool = True) -> str:
+    package_local_path = name.replace(".", "\\")
+
+    safe_as_name = as_name or name
+
+    def _alive(base, path: str):
+        full_path = os.path.join(base, path)
+        if os.path.isfile(f"{full_path}.py"):
+            return f"{full_path}.py", True
+        if os.path.isdir(full_path):
+            return full_path, False
+        return None, None
+
+    is_template: bool = False
+    sourcefile_path, is_file = _alive(READ_PATH, package_local_path)
+    if sourcefile_path is None:
+
+        base_path = TEMPLATE_PATH
+        if is_parent_path(TEMPLATE_PATH, package_local_path):
+            base_path = ''
+
+        sourcefile_path, is_file = _alive(base_path, package_local_path)
+        if sourcefile_path is None:
+            raise Exception(f"无法导入 '{name}', {package_local_path}")
+        is_template = True
+
+    if (not is_template) and check_template(sourcefile_path):
+        is_template = True
+
+    command = ''
+
+    if is_file and not is_template:
+        with open(sourcefile_path, mode='r', encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+
+        print("------------导入文件-----------")
+        print(os.path.normpath(os.path.join(sourcefile_path)))
+        print(ast.dump(tree, indent=4))
+        print("------------------------------")
+
+        new_namespace = join_base_ns(name)
+        if register_ns:
+            ns_setter(safe_as_name, new_namespace, namespace, "module")
+
+        generate_code(tree, new_namespace)
+
+        command += f"function {new_namespace}/.__module\n"
+        return command
+
+    if is_file and is_template:
+        init_template(name)
+        ns_map[join_base_ns(name)] = OrderedDict()
+
+    return command
+
+
 def generate_code(node, namespace: str) -> str:
     os.makedirs(namespace_path(namespace, ''), exist_ok=True)
 
     if isinstance(node, ast.Module):
         ns_map[namespace] = OrderedDict()
-        import_module_map[root_namespace(namespace)] = {}
-        from_import_map[root_namespace(namespace)] = {}
+        temp_map[namespace] = []
         with open(namespace_path(namespace, ".__module.mcfunction"), mode='w', encoding="utf-8") as f:
             f.write(COMMENT(f"Generated by MCFC"))
             f.write(COMMENT(f"Github: https://github.com/C418-11/MinecraftFunctionCompiler"))
@@ -298,53 +355,8 @@ def generate_code(node, namespace: str) -> str:
             if n.name.startswith("."):
                 raise Exception("暂时不支持相对导入")
 
-            pack_path = n.name.replace(".", "\\")
-            file_path = os.path.join(READ_PATH, f"{pack_path}.py")
+            command += import_as(n.name, n.asname, namespace)
 
-            as_name = n.asname if n.asname is not None else n.name
-
-            if not os.path.exists(file_path):
-
-                template_path = f"{pack_path}.py"
-                if not is_parent_path(READ_PATH, file_path):
-                    template_path = os.path.join(TEMPLATE_PATH, f"{pack_path}.py")
-
-                res = check_template(template_path)
-                if res:
-                    import_module_map[root_namespace(namespace)].update({as_name: n.name})
-                    init_template(n.name)
-                    continue
-                else:
-                    raise Exception(f"未找到模板文件 {template_path}")
-
-            with open(file_path, mode='r', encoding="utf-8") as f:
-                tree = ast.parse(f.read())
-
-            print("------------导入文件-----------")
-            print(os.path.normpath(os.path.join(READ_PATH, f"{n.name}.py")))
-            print(ast.dump(tree, indent=4))
-            print("------------------------------")
-
-            new_namespace = join_base_ns(n.name)
-            generate_code(tree, new_namespace)
-
-            if as_name in import_module_map[root_namespace(namespace)]:
-                warnings.warn(
-                    f"导入模块 {as_name} 已经存在, 可能覆盖之前的定义",
-                    UserWarning
-                )
-            import_module_map[root_namespace(namespace)].update({as_name: n.name})
-            ns_map[namespace].update({as_name: {".__namespace__": new_namespace, ".__type__": "module"}})
-
-            command += COMMENT(f"Import:导入模块", name=n.name, as_name=as_name)
-            command += DEBUG_TEXT(
-                DebugTip.Init,
-                {"text": f"导入 ", "color": "gold", "bold": True},
-                {"text": f"{n.name}", "color": "dark_purple"},
-                {"text": f" 用作 ", "color": "gold"},
-                {"text": f"{as_name}", "color": "dark_purple"},
-            )
-            command += f"function {new_namespace}/.__module\n"
         return command
 
     if isinstance(node, ast.ImportFrom):
@@ -352,17 +364,11 @@ def generate_code(node, namespace: str) -> str:
             if not isinstance(n, ast.alias):
                 raise Exception("ImportFrom 暂时只支持 alias")
 
-            as_name = n.asname if n.asname is not None else n.name
+            safe_as_name = n.asname or n.name
 
-            if as_name in import_module_map[root_namespace(namespace)]:
-                warnings.warn(
-                    f"导入模块 {as_name} 已经存在, 可能覆盖之前的定义",
-                    UserWarning
-                )
-            from_import_map[root_namespace(namespace)].update({as_name: (node.module, n.name)})
-            # ns_setter(as_name, f"{as_name}", namespace)
+            ns_setter(safe_as_name, f"{join_base_ns(node.module)}|{n.name}", namespace, "attribute")
 
-        return generate_code(ast.Import(names=[ast.alias(name=node.module, asname=None)]), namespace)
+        return import_as(node.module, None, namespace, register_ns=False)
 
     if isinstance(node, ast.FunctionDef):
         with open(namespace_path(namespace, f"{node.name}.mcfunction"), mode='w', encoding="utf-8") as f:
@@ -775,7 +781,7 @@ def generate_code(node, namespace: str) -> str:
         from_namespace = f"{namespace}{ResultExt}"
 
         for t in node.targets:
-            name, _, root_ns = node_to_namespace(t, namespace)
+            name, _, root_ns = node_to_namespace(t, namespace, not_exists_ok=True, ns_type="variable")
 
             target_namespace = f"{root_ns}.{name}"
 
@@ -798,17 +804,19 @@ def generate_code(node, namespace: str) -> str:
         return command
 
     if isinstance(node, ast.Call):
-        func_name, func_ns, ns = node_to_namespace(node.func, namespace)
+        is_builtin: bool = False
+        if isinstance(node.func, ast.Name) and node.func.id in dir(__builtins__):
+            is_builtin = True
+            func_name = node.func.id
+            func_ns = f"python:built-in\\{func_name}"
+            ns = "python:built-in"
+        else:
+            func_name, func_ns, ns = node_to_namespace(node.func, namespace, not_exists_ok=True, ns_type="function")
+
         commands: str = ''
 
-        # 如果是python内置函数，则不需要加上命名空间
-        is_builtin: bool = False
-        if func_name in dir(__builtins__):
-            func_ns = f"python:built-in\\{func_name}"
-            is_builtin = True
-
         # 如果是模版函数，则调用模版函数
-        elif f"{root_namespace(ns)}.{func_name}" in template_funcs:
+        if f"{root_namespace(ns)}.{func_name}" in template_funcs:
             func_ns = template_funcs[f"{root_namespace(ns)}.{func_name}"]
             commands += COMMENT(f"Template.Call:调用模板函数", func=func_ns.__name__, namespace=root_namespace(ns))
             commands += DEBUG_TEXT(
@@ -820,8 +828,6 @@ def generate_code(node, namespace: str) -> str:
             commands += func_ns(node.args, node.keywords, namespace=namespace)
             commands += COMMENT(f"Template.Call:调用模版函数结束")
             return commands
-        else:
-            func_ns, ns = ns_getter(func_name, ns)
 
         try:
             this_func_args = func_args[func_ns]
@@ -893,6 +899,24 @@ def generate_code(node, namespace: str) -> str:
     return f"tellraw @a {err_msg}\n" + COMMENT("无法解析的节点:") + COMMENT(ast.dump(node, indent=4))
 
 
+def _deep_sorted(d: dict | OrderedDict) -> OrderedDict | Any:
+    if type(d) in (list, tuple):
+        _processed = []
+        for item in d:
+            _processed.append(_deep_sorted(item))
+        _processed.sort()
+        return type(d)(_processed)
+    if type(d) is dict:
+        d = OrderedDict(d)
+    if type(d) is not OrderedDict:
+        return d
+
+    _sorted_dict = OrderedDict()
+    for key in sorted(d.keys()):
+        _sorted_dict[key] = _deep_sorted(d[key])
+    return _sorted_dict
+
+
 def main():
     global SAVE_PATH
     global READ_PATH
@@ -912,21 +936,32 @@ def main():
 
     print(ast.dump(tree, indent=4))
     print(generate_code(tree, join_base_ns(file_name)))
-    print(f"[DEBUG] {func_args=}")
+
+    def _debug_dump(v: dict):
+        return json.dumps(_deep_sorted(v), indent=4)
+
+    _func_args = OrderedDict()
+    for func_ns, args in func_args.items():
+        _func_args[func_ns] = OrderedDict()
+        for arg in args:
+            _func_args[func_ns][arg] = repr(args[arg])
+
+    _dumped_func_args = _debug_dump(_func_args)
+    print(f"[DEBUG] FunctionArguments={_dumped_func_args}")
     print()
-    print(f"[DEBUG] {import_module_map=}")
+    _template_func = OrderedDict()
+    for name, func in template_funcs.items():
+        _template_func[name] = repr(func)
+    _dumped_template_func = _debug_dump(_template_func)
+    print(f"[DEBUG] TemplateFunctions={_dumped_template_func}")
     print()
-    print(f"[DEBUG] {from_import_map=}")
-    print()
-    print(f"[DEBUG] {template_funcs=}")
-    print()
-    _dumped_sb_name2code = json.dumps(SB_Name2Code, indent=4)
+    _dumped_sb_name2code = _debug_dump(SB_Name2Code)
     print(f"[DEBUG] SB_Name2Code={_dumped_sb_name2code}")
     print()
-    _dumped_ns_map = json.dumps(ns_map, indent=4)
+    _dumped_ns_map = _debug_dump(ns_map)
     print(f"[DEBUG] NamespaceMap={_dumped_ns_map}")
     print()
-    _dumped_temp_map = json.dumps(temp_map, indent=4)
+    _dumped_temp_map = _debug_dump(temp_map)
     print(f"[DEBUG] TemplateScoreboardVariableMap={_dumped_temp_map}")
 
 
