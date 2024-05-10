@@ -10,10 +10,14 @@ SB_Name2Code: dict[str, dict[str, str]] = {}
 SB_Code2Name: dict[str, dict[str, str]] = {}
 
 
-def init_name(name, objective):
+def init_objective(objective):
     if objective not in SB_Name2Code:
         SB_Name2Code[objective] = {}
         SB_Code2Name[objective] = {}
+
+
+def init_name(name, objective):
+    init_objective(objective)
     SB_Name2Code[objective][name] = name
     SB_Code2Name[objective][name] = name
 
@@ -32,9 +36,7 @@ _UID = 0
 def gen_code(name, objective):
     global _UID
 
-    if objective not in SB_Name2Code:
-        SB_Name2Code[objective] = {}
-        SB_Code2Name[objective] = {}
+    init_objective(objective)
 
     if name in SB_Name2Code[objective]:
         return SB_Name2Code[objective][name]
@@ -160,6 +162,7 @@ def SB_OP(
 
 
 def SB_RESET(name: str, objective: str, *, line_break: bool = True):
+    init_objective(objective)
     command = f"scoreboard players reset {SB_Name2Code[objective][name]} {objective}"
     if line_break:
         command += "\n"
@@ -186,9 +189,12 @@ __all__ = (
     "SB_RESET",
     "SB_CONSTANT",
 
+    "IgnoreEncode",
+
     "SB_Name2Code",
     "SB_Code2Name",
 
+    "init_objective",
     "init_name",
     "gen_code",
 )
