@@ -788,7 +788,13 @@ def generate_code(node, namespace: str) -> str:
         try:
             cmd = SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
         except KeyError:
-            pass
+            warnings.warn(
+                (
+                    "The expression unexpectedly has no return value. The reset return value is ignored. "
+                    f"namespace=\"{namespace}{ResultExt}\""
+                ),
+                UserWarning
+            )
         else:
             command += COMMENT(f"Expr:清除表达式返回值")
             command += cmd
@@ -854,7 +860,7 @@ def generate_code(node, namespace: str) -> str:
         template_func_name = f"{ns.split(':', maxsplit=1)[1]}.{func_name}"
         if template_func_name in template_funcs:
             func_ns = template_funcs[template_func_name]
-            commands += COMMENT(f"Template.Call:调用模板函数", func=func_ns.__name__, namespace=template_func_name)
+            commands += COMMENT(f"Template.Call:调用模板函数", func=template_func_name)
             commands += DEBUG_TEXT(
                 DebugTip.CallTemplate,
                 {"text": f"{func_ns.__name__}", "color": "dark_purple"},
@@ -931,6 +937,7 @@ def generate_code(node, namespace: str) -> str:
 
         return commands
 
+    warnings.warn(f"无法解析的节点: {namespace}.{type(node).__name__}", UserWarning)
     err_msg = json.dumps({"text": f"无法解析的节点: {namespace}.{type(node).__name__}", "color": "red"})
     return f"tellraw @a {err_msg}\n" + COMMENT("无法解析的节点:") + COMMENT(ast.dump(node, indent=4))
 
