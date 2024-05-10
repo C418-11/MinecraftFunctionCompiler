@@ -784,7 +784,15 @@ def generate_code(node, namespace: str) -> str:
         return command
 
     if isinstance(node, ast.Expr):
-        return generate_code(node.value, namespace)
+        command = generate_code(node.value, namespace)
+        try:
+            cmd = SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
+        except KeyError:
+            pass
+        else:
+            command += COMMENT(f"Expr:清除表达式返回值")
+            command += cmd
+        return command
 
     if isinstance(node, ast.Constant):
         value = node.value
