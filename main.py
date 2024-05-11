@@ -182,7 +182,7 @@ def generate_code(node, namespace: str) -> str:
             if n.name.startswith("."):
                 raise Exception("暂时不支持相对导入")
 
-            command += import_as(n.name, n.asname, namespace)
+            command += import_as(n.name, n.asname, namespace)[0]
 
         return command
 
