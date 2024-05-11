@@ -11,6 +11,9 @@ ResultExt = ".?Result"
 
 
 class ScoreBoards:
+    """
+    计分板名称
+    """
     Args = "Py.Args"
     Temp = "Py.Temp"
     Flags = "Py.Flags"
@@ -23,12 +26,18 @@ DataStorageRoot = "python"
 
 
 class DataStorages:
+    """
+    data storage相关
+    """
     Temp = "temporary"
     LocalVars = "LocalVars"
     LocalTemp = "LocalTemp"
 
 
 class RawJsons:
+    """
+    原始json文本
+    """
     Prefix = {
         "text": "[Python]",
 
@@ -57,6 +66,9 @@ class RawJsons:
 
 
 class Flags:
+    """
+    FLAGS计分板的计分项名
+    """
     TRUE = "True"
     FALSE = "False"
     NEG = "Neg"

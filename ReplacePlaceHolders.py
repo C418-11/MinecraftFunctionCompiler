@@ -59,16 +59,13 @@ def get_files(base_path: str, root_dir: str):
             yield os.path.normpath(os.path.join(root, file)), relative_path, file
 
 
-SAVE_PATH = r".\.output"
-
-
-# SAVE_PATH = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks"
-
-
 def main():
     file_extensions = [".mcfunction", ".mcmeta"]
+    save_path = r".\.output"
+    # save_path = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks""
+    read_path = r".\Python"
 
-    for file_path, relative_path, file in get_files(r".", r".\Python"):
+    for file_path, relative_path, file in get_files(r"", read_path):
 
         print(file_path, relative_path, file)
         print("-" * 50)
@@ -85,10 +82,10 @@ def main():
             print("No Processing", file_path)
             new_code = code
 
-        print("Saving", file_path, "To", os.path.join(SAVE_PATH, relative_path, file))
+        print("Saving", file_path, "To", os.path.join(save_path, relative_path, file))
 
-        os.makedirs(os.path.join(SAVE_PATH, relative_path), exist_ok=True)
-        with open(os.path.join(SAVE_PATH, relative_path, file), encoding="UTF-8", mode='w') as f:
+        os.makedirs(os.path.join(save_path, relative_path), exist_ok=True)
+        with open(os.path.join(save_path, relative_path, file), encoding="UTF-8", mode='w') as f:
             f.write(new_code)
 
         print("Done.", file_path)
