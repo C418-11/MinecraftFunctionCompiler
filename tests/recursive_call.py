@@ -1,7 +1,6 @@
+from template.MinecraftSupport.EnvBuild import build_scoreboard
 from template.MinecraftSupport.builtin import tprint
 from template.MinecraftSupport.scoreboard import get_score
-from template.MinecraftSupport.EnvBuild import build_scoreboard
-
 
 build_scoreboard(
     "num",
@@ -13,7 +12,7 @@ def factorial(n):
     if n == 0:
         return 1
     else:
-        return n * factorial(n-1)
+        return n * factorial(n - 1)
 
 
 # 测试

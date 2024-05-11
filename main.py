@@ -42,13 +42,11 @@ from Template import check_template
 from Template import init_template
 from Template import template_funcs
 
-
 SB_ARGS: str = ScoreBoards.Args
 SB_TEMP: str = ScoreBoards.Temp
 SB_FLAGS: str = ScoreBoards.Flags
 SB_VARS: str = ScoreBoards.Vars
 SB_FUNC_RESULT: str = ScoreBoards.FuncResult
-
 
 SAVE_PATH: None | str = None
 READ_PATH: None | str = None

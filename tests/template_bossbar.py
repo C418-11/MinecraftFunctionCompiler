@@ -1,7 +1,6 @@
-from template.MinecraftSupport.EnvBuild import build_scoreboard
 from template.MinecraftSupport import bossbar
+from template.MinecraftSupport.EnvBuild import build_scoreboard
 from template.MinecraftSupport.scoreboard import get_score
-
 
 build_scoreboard(
     "bossbar",
@@ -12,10 +11,9 @@ build_scoreboard(
     }
 )
 
-
 if get_score("remove", "bossbar"):
     bossbar.remove("test")
-bossbar.add("test",  {"text": "Test", "color": "gold"})
+bossbar.add("test", {"text": "Test", "color": "gold"})
 bossbar.set_players("test", "@a")
 
 now_value = get_score("value", "bossbar")

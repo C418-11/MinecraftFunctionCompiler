@@ -22,13 +22,12 @@ def init_name(name, objective):
     SB_Code2Name[objective][name] = name
 
 
-def _init_flags(name,  objective):
+def _init_flags(name, objective):
     if objective == ScoreBoards.Flags:
         init_name(name, objective)
 
 
 IgnoreEncode: bool = False
-
 
 _UID = 0
 

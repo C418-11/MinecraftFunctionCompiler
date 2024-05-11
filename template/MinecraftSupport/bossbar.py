@@ -38,7 +38,7 @@ def _add(_id: str, name: dict | str):
 
     name = _CheckName(name)
     BossBar_Map[_id] = {"name": json.dumps(name.to_dict())}
-    print(name.to_ansi()+"\033[0m")
+    print(name.to_ansi() + "\033[0m")
     return CommandResult(success=True, result=len(BossBar_Map))
 
 
@@ -120,7 +120,7 @@ def get_players(_id: str):
 
 def _CheckValue(value: int | float):
     if isinstance(value, float):
-        value = int(value * (10**DECIMAL_PRECISION))
+        value = int(value * (10 ** DECIMAL_PRECISION))
 
     if not isinstance(value, int):
         raise TypeError("value must be int or float")
@@ -260,7 +260,7 @@ def _set_name(_id: str, name: dict | str):
         BossBar_Map[_id]["name"] = json.dumps(name.to_dict())
     except KeyError:
         return CommandResult(success=False)
-    print(name.to_ansi()+"\033[0m")
+    print(name.to_ansi() + "\033[0m")
     return CommandResult(success=True, result=0)
 
 
