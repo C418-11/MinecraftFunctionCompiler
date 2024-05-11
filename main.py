@@ -4,6 +4,7 @@
 import ast
 import json
 import os
+import time
 import warnings
 from collections import OrderedDict
 from itertools import zip_longest
@@ -779,11 +780,16 @@ def main():
     BASE_NAMESPACE = "source_code:"
     file_name = "recursive_call"
 
+    start_t = time.time()
     with open(os.path.join(READ_PATH, f"{file_name}.py"), mode='r', encoding="utf-8") as _:
         tree = ast.parse(_.read())
 
     print(ast.dump(tree, indent=4))
     print(generate_code(tree, join_base_ns(file_name)))
+    end_t = time.time()
+
+    print(f"[DEBUG] TimeUsed={end_t - start_t}")
+    print()
 
     def _debug_dump(v: dict):
         return json.dumps(_deep_sorted(v), indent=4)

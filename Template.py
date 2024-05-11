@@ -6,6 +6,7 @@ __version__ = "0.0.1Dev"
 
 import ast
 import functools
+import importlib
 import inspect
 import re
 import sys
@@ -115,7 +116,6 @@ def check_template(file_path: str) -> bool:
 
 
 def init_template(name: str) -> None:
-    import importlib
     module = importlib.import_module(name)
     try:
         module.init()
