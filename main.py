@@ -7,6 +7,7 @@ import os
 import time
 import warnings
 from collections import OrderedDict
+from functools import lru_cache
 from itertools import zip_longest
 from typing import Any
 
@@ -87,7 +88,7 @@ def newUid() -> str:
 def alive_import(import_path: str, base: str = '') -> tuple[str | None, bool | None]:
     package_local_path = import_path.replace(".", "\\")
 
-    full_path = os.path.join(base, package_local_path)
+    full_path = os.path.normpath(os.path.join(base, package_local_path))
     if os.path.isfile(f"{full_path}.py"):
         return f"{full_path}.py", True
     if os.path.isdir(full_path):
@@ -95,6 +96,7 @@ def alive_import(import_path: str, base: str = '') -> tuple[str | None, bool | N
     return None, None
 
 
+@lru_cache(maxsize=None)
 def import_as(name: str, as_name: str | None, namespace: str, *, register_ns: bool = True) -> tuple[str, bool]:
     package_local_path = name.replace(".", "\\")
 
@@ -119,11 +121,12 @@ def import_as(name: str, as_name: str | None, namespace: str, *, register_ns: bo
     command = ''
 
     if is_file and not is_template:
+        start_t = time.time()
         with open(sourcefile_path, mode='r', encoding="utf-8") as f:
             tree = ast.parse(f.read())
 
         print("------------导入文件-----------")
-        print(os.path.normpath(os.path.join(sourcefile_path)))
+        print(sourcefile_path)
         print(ast.dump(tree, indent=4))
         print("------------------------------")
 
@@ -132,6 +135,8 @@ def import_as(name: str, as_name: str | None, namespace: str, *, register_ns: bo
             ns_setter(safe_as_name, new_namespace, namespace, "module")
 
         generate_code(tree, new_namespace)
+        end_t = time.time()
+        print(f"编译导入模块 {sourcefile_path}, 耗时{end_t - start_t}秒")
 
         command += f"function {new_namespace}/.__module\n"
 
@@ -154,8 +159,13 @@ def import_as(name: str, as_name: str | None, namespace: str, *, register_ns: bo
     return command, is_file
 
 
+@lru_cache(maxsize=None)
+def cache_mkdirs(path: str, *, exist_ok: bool = False):
+    os.makedirs(path, exist_ok=exist_ok)
+
+
 def generate_code(node, namespace: str) -> str:
-    os.makedirs(namespace_path(namespace, ''), exist_ok=True)
+    cache_mkdirs(namespace_path(namespace, ''), exist_ok=True)
 
     if isinstance(node, ast.Module):
         ns_map[namespace] = OrderedDict({
@@ -785,7 +795,9 @@ def main():
         tree = ast.parse(_.read())
 
     print(ast.dump(tree, indent=4))
-    print(generate_code(tree, join_base_ns(file_name)))
+    print()
+
+    generate_code(tree, join_base_ns(file_name))
     end_t = time.time()
 
     print(f"[DEBUG] TimeUsed={end_t - start_t}")
