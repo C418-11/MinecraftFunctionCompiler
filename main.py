@@ -45,8 +45,11 @@ from Template import check_template
 from Template import init_template
 from Template import template_funcs
 from BreakPointTools import register_processor
+from BreakPointTools import raiseBreakPoint
+from BreakPointTools import BreakPointTree
 from BreakPointTools import SplitBreakPoint
 from BreakPointTools import BreakPointFlag
+from BreakPointTools import updateBreakPoint
 
 SB_ARGS: str = ScoreBoards.Args
 SB_TEMP: str = ScoreBoards.Temp
@@ -78,6 +81,12 @@ def join_base_ns(path: str) -> str:
 def namespace_path(namespace: str, path: str) -> str:
     base_path = os.path.join(namespace.split(":", 1)[1], path)
     return os.path.join(SAVE_PATH, base_path)
+
+
+def remove_base_ns(namespace: str) -> str:
+    if not namespace.startswith(BASE_NAMESPACE):
+        raise Exception(f"namespace '{namespace}' is not in base namespace '{BASE_NAMESPACE}'")
+    return namespace[len(BASE_NAMESPACE):]
 
 
 Uid = 0
@@ -179,8 +188,20 @@ def cache_mkdirs(path: str, *, exist_ok: bool = False):
 
 
 @register_processor("return")
-def sbp_return(func_path, *, name, objective):
+def sbp_return(func_path, level, *, name, objective):
     command = ''
+    if level is not None:
+        command += FORCE_COMMENT(BreakPointFlag(
+            "return",
+            name=name,
+            objective=objective
+        ))
+
+        keep_raise: bool = True
+        if level == "function":
+            command += SB_RESET(name, objective)
+            keep_raise = False
+        return command, keep_raise
     command += COMMENT("Return.BreakPoint")
     command += CHECK_SB(
         SBCheckType.UNLESS,
@@ -189,7 +210,7 @@ def sbp_return(func_path, *, name, objective):
         Flags.TRUE, SB_FLAGS,
         f"function {func_path}"
     )
-    command += SB_RESET(name, objective)
+
     return command
 
 
@@ -259,6 +280,7 @@ def generate_code(node, namespace: str) -> str:
             for statement in node.body:
                 body = generate_code(statement, f"{namespace}\\{node.name}")
                 f.write(body)
+            f.write(updateBreakPoint(remove_base_ns(namespace), "function"))
         return ''
 
     if isinstance(node, ast.Global):
@@ -280,11 +302,13 @@ def generate_code(node, namespace: str) -> str:
             for statement in node.body:
                 body = generate_code(statement, namespace)
                 f.write(body)
+            f.write(updateBreakPoint(remove_base_ns(namespace), "if"))
         with SplitBreakPoint(os.path.join(base_path, f"{block_uid}-else.mcfunction"), namespace, encoding="utf-8") as f:
             f.write(DEBUG_OBJECTIVE({"text": "进入False分支"}, objective=SB_TEMP, name=f"{namespace}{ResultExt}"))
             for statement in node.orelse:
                 body = generate_code(statement, namespace)
                 f.write(body)
+            f.write(updateBreakPoint(remove_base_ns(namespace), "if"))
 
         command = ''
         func_path = f"{base_namespace}\\{block_uid}".replace('\\', '/')
@@ -422,7 +446,7 @@ def generate_code(node, namespace: str) -> str:
         command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
         command += COMMENT("Return:断点")
-        breakpoint_id = newUid()
+        breakpoint_id = f"breakpoint_return_{newUid()}"
         command += SB_ASSIGN(
             f"{breakpoint_id}", SB_TEMP,
             Flags.TRUE, SB_FLAGS
@@ -433,6 +457,8 @@ def generate_code(node, namespace: str) -> str:
             name=breakpoint_id,
             objective=SB_TEMP
         ))
+        raiseBreakPoint(remove_base_ns(namespace), "return", name=breakpoint_id, objective=SB_TEMP)
+        command += updateBreakPoint(remove_base_ns(namespace), "line")
 
         return command
 
@@ -877,6 +903,10 @@ def main():
     print()
     _dumped_temp_map = _debug_dump(temp_map)
     print(f"[DEBUG] TemplateScoreboardVariableMap={_dumped_temp_map}")
+    print()
+    _dumped_breakpoint_tree = _debug_dump(BreakPointTree)
+    print(f"[DEBUG] BreakPointTree={_dumped_breakpoint_tree}")
+    print()
 
 
 if __name__ == "__main__":

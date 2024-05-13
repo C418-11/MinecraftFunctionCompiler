@@ -10,10 +10,15 @@ import os
 import warnings
 from typing import Callable
 
+Processor = Callable[[str, str | None, ...], str | None | tuple[str, bool]]
 
-BreakPointProcessor: dict[str | None, Callable[[str, ...], str | None]] = {
-    None: lambda _, *args: None,
+BreakPointProcessor: dict[str | None, Processor] = {
+    None: lambda _, __, *args: None,
 }
+
+
+BreakPointTree: dict[str, list[dict[str, ...]] | dict[str, ...]] = {}
+BreakPointLevels: list[str] = ["if", "function", "module", "line"]
 
 
 def BreakPointFlag(func: str | None, *args, **kwargs):
@@ -25,7 +30,7 @@ def BreakPointFlag(func: str | None, *args, **kwargs):
 
 
 def register_processor(name: str | None):
-    def decorator(func: Callable[[str, ...], str | None]):
+    def decorator(func: Processor):
         if name in BreakPointProcessor:
             warnings.warn(
                 f"{name} already registered, it will be replaced",
@@ -36,6 +41,63 @@ def register_processor(name: str | None):
         return func
 
     return decorator
+
+
+def raiseBreakPoint(namespace: str, func: str | None, *args, **kwargs):
+    last = BreakPointTree
+    target_node: dict | None = None
+    name = None
+
+    for name in namespace.split('\\'):
+        if name not in last:
+            last[name] = {}
+        target_node = last
+        last = last[name]
+
+    if ":breakpoints" not in target_node[name]:
+        last[":breakpoints"] = []
+
+    target_node[name][":breakpoints"].append({
+        "func": func,
+        "args": args,
+        "kwargs": kwargs,
+    })
+
+
+def updateBreakPoint(namespace: str, level):
+    if level not in BreakPointLevels:
+        raise Exception(f"SBP: Unknown level: \'{level}\', please check if it is registered in the code.")
+
+    last = BreakPointTree
+
+    for name in namespace.split('\\'):
+        if name not in last:
+            last[name] = {}
+        last = last[name]
+
+    def _update(func_key, args, kwargs):
+        try:
+            func = BreakPointProcessor[func_key]
+        except KeyError:
+            raise Exception(f"SBP: Unknown function: \'{func_key}\', please check if it is registered in the code.")
+
+        result, keep_raise = func(namespace, level, *args, **kwargs)
+
+        if keep_raise:
+            if '\\' in namespace:
+                father = namespace.split('\\', maxsplit=1)[0]
+            else:
+                father = namespace
+            raiseBreakPoint(father, func_key, *args, **kwargs)
+
+        result = '' if result is None else result
+        return result
+
+    command = ''
+    print(BreakPointTree, last)
+    for _breakpoint in last[":breakpoints"]:
+        command += _update(_breakpoint["func"], _breakpoint["args"], _breakpoint["kwargs"])
+    return command
 
 
 class SplitBreakPoint:
@@ -89,7 +151,7 @@ class SplitBreakPoint:
             raise Exception("SBP: Arguments are not valid json format.")
 
         ns_path = f"{self._namespace}/{id_name}"
-        result = func(ns_path, *args, **kwargs)
+        result = func(ns_path, None, *args, **kwargs)
 
         result = '' if result is None else result
 
@@ -159,6 +221,10 @@ class SplitBreakPoint:
 
 __all__ = (
     "BreakPointFlag",
+    "BreakPointTree",
+
+    "raiseBreakPoint",
+    "updateBreakPoint",
 
     "register_processor",
     "SplitBreakPoint",
