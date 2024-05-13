@@ -109,10 +109,7 @@ class DebugTip:
 GENERATE_COMMENTS: bool = True
 
 
-def COMMENT(*texts: str, **kv_texts) -> str:
-    if not GENERATE_COMMENTS:
-        return ''
-
+def FORCE_COMMENT(*texts: str, **kv_texts) -> str:
     nor_text = ' '.join(texts)
     kv_text = '\n'.join(f"{k} = {v}" for k, v in kv_texts.items())
 
@@ -130,10 +127,18 @@ def COMMENT(*texts: str, **kv_texts) -> str:
     return ret
 
 
+def COMMENT(*texts: str, **kv_texts) -> str:
+    if not GENERATE_COMMENTS:
+        return ''
+
+    return FORCE_COMMENT(*texts, **kv_texts)
+
+
 __all__ = (
     "DEBUG_OBJECTIVE",
     "DEBUG_TEXT",
     "DebugTip",
+    "FORCE_COMMENT",
     "COMMENT",
     "ENABLE_DEBUGGING",
     "GENERATE_COMMENTS"
