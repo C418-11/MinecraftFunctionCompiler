@@ -55,10 +55,12 @@ def _parse_node(node, namespace: str):
     return node
 
 
-def register_func(python_func):
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(args, kwargs, *, namespace):
+def register_func(func_for_python):
+    def decorator(func_for_compile):
+        parameter_set = set(inspect.signature(func_for_compile).parameters.keys())
+
+        @functools.wraps(func_for_compile)
+        def wrapper(args, kwargs, *, namespace, file_namespace):
 
             if args is None:
                 args = []
@@ -80,21 +82,31 @@ def register_func(python_func):
                     raise TypeError("kwargs must be keyword")
                 new_kwargs[kwarg.arg] = _parse_node(kwarg.value, namespace)
 
+            data = {
+                "namespace": namespace,
+                "file_namespace": file_namespace
+            }
+
+            optional_parameters = set(data.keys())
+            required_parameters = parameter_set & optional_parameters
+
+            required_kwargs = {k: data[k] for k in required_parameters}
+
             try:
-                return func(*new_args, **new_kwargs, namespace=namespace)
+                return func_for_compile(*new_args, **new_kwargs, **required_kwargs)
             except TypeError as e:
-                cmp = re.compile(fr"{func.__name__}\(\)\sgot\san\sunexpected\skeyword\sargument\s'namespace'")
+                cmp = re.compile(fr"{func_for_compile.__name__}\(\)\sgot\san\sunexpected\skeyword\sargument\s'namespace'")
                 if not cmp.match(str(e)):
                     raise
 
-            return func(*new_args, **new_kwargs)
+            return func_for_compile(*new_args, **new_kwargs)
 
-        package_name = inspect.getmodule(func).__name__
-        full_path = f"{package_name}\\module.{func.__name__}"
+        package_name = inspect.getmodule(func_for_compile).__name__
+        full_path = f"{package_name}\\module.{func_for_compile.__name__}"
 
         template_funcs[full_path] = wrapper
 
-        return python_func
+        return func_for_python
 
     return decorator
 

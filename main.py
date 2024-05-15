@@ -14,6 +14,7 @@ from Constant import Flags
 from Constant import ResultExt
 from Constant import ScoreBoards
 from DebuggingTools import COMMENT
+from DebuggingTools import FORCE_COMMENT
 from DebuggingTools import DEBUG_OBJECTIVE
 from DebuggingTools import DEBUG_TEXT
 from DebuggingTools import DebugTip
@@ -48,11 +49,10 @@ from ScoreboardTools import init_name
 from Template import check_template
 from Template import init_template
 from Template import template_funcs
-# from BreakPointTools import register_processor
-# from BreakPointTools import raiseBreakPoint
-from BreakPointTools import BreakPointNamespace
+from BreakPointTools import register_processor
+from BreakPointTools import raiseBreakPoint
 from BreakPointTools import SplitBreakPoint
-# from BreakPointTools import BreakPointFlag
+from BreakPointTools import BreakPointFlag
 from BreakPointTools import updateBreakPoint
 
 SB_ARGS: str = ScoreBoards.Args
@@ -74,7 +74,7 @@ def is_parent_path(path1, path2):
 
 
 def join_base_ns(path: str) -> str:
-    if BASE_NAMESPACE.endswith(":"):
+    if BASE_NAMESPACE.endswith(':'):
         new_namespace = f"{BASE_NAMESPACE}{path}"
     else:
         new_namespace = f"{BASE_NAMESPACE}\\{path}"
@@ -83,7 +83,7 @@ def join_base_ns(path: str) -> str:
 
 
 def namespace_path(namespace: str, path: str) -> str:
-    base_path = os.path.join(namespace.split(":", 1)[1], path)
+    base_path = os.path.join(namespace.split(':', 1)[1], path)
     return os.path.join(SAVE_PATH, base_path)
 
 
@@ -181,31 +181,41 @@ def mkdirs(path: str, *, exist_ok: bool = False):
     os.makedirs(path, exist_ok=exist_ok)
 
 
-# @register_processor("return") todo
-# def sbp_return(func_path, level, *, name, objective):
-#     command = ''
-#     if level is not None:
-#         command += FORCE_COMMENT(BreakPointFlag(
-#             "return",
-#             name=name,
-#             objective=objective
-#         ))
-#
-#         keep_raise: bool = True
-#         if level == "function":
-#             command += SB_RESET(name, objective)
-#             keep_raise = False
-#         return command, keep_raise
-#     command += COMMENT("Return.BreakPoint")
-#     command += CHECK_SB(
-#         SBCheckType.UNLESS,
-#         name, objective,
-#         SBCompareType.EQUAL,
-#         Flags.TRUE, SB_FLAGS,
-#         f"function {func_path}"
-#     )
-#
-#     return command
+@register_processor("return")
+def sbp_return(func_path, level, *, name, objective):
+    def _process_raise():
+        command = ''
+        command += COMMENT("BP:Return.Raise")
+        keep_raise: bool = True
+        if level in ["module", "function"]:
+            command += SB_RESET(name, objective)
+            keep_raise = False
+        else:
+            command += FORCE_COMMENT(BreakPointFlag(
+                "return",
+                name=name,
+                objective=objective
+            ))
+        return command, keep_raise
+
+    def _process_split():
+        command = ''
+        command += COMMENT("BP:Return.Split")
+        command += CHECK_SB(
+            SBCheckType.UNLESS,
+            name, objective,
+            SBCompareType.EQUAL,
+            Flags.TRUE, SB_FLAGS,
+            f"function {func_path}"
+        )
+
+        return command
+
+    if func_path is None:
+        return _process_raise()
+
+    if level is None:
+        return _process_split()
 
 
 def file_ns_path(path: str, *args):
@@ -225,16 +235,16 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
 
         # 注册路径
         mkdirs(file_ns_path(file_ns), exist_ok=True)
-        file_ns_init(file_ns, "folder", namespace)
+        file_ns_init(file_ns, None, "folder", namespace)
         mkdirs(file_ns_path(file_ns, "module"), exist_ok=True)
         ns_setter("module", f"{namespace}\\module", namespace, "module")
         file_ns_setter(
             "module.mcfunction", join_file_ns(file_ns, "module.mcfunction"), file_ns,
-            "module", "mcfunction"
+            "module", "mcfunction", namespace
         )
         file_ns_setter(
             "module", join_file_ns(file_ns, "module"), file_ns,
-            None, "folder"
+            "module", "folder", namespace
         )
 
         # 生成并写入
@@ -245,6 +255,7 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
             for statement in node.body:
                 c = generate_code(statement, f"{namespace}\\module", join_file_ns(file_ns, "module"))
                 f.write(c)
+            f.write(updateBreakPoint(f"{file_ns}\\module"))
 
         return ''
 
@@ -284,11 +295,11 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
         mkdirs(file_ns_path(new_file_ns), exist_ok=True)
         file_ns_setter(
             f"{node.name}", new_file_ns, file_ns,
-            None, "folder"
+            "function", "folder", namespace
         )
         file_ns_setter(
             f"{node.name}.mcfunction", join_file_ns(file_ns, f"{node.name}.mcfunction"), file_ns,
-            "function", "mcfunction"
+            "function", "mcfunction", namespace
         )
 
         # 生成并写入
@@ -303,7 +314,6 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
             for statement in node.body:
                 body = generate_code(statement, f"{namespace}\\{node.name}", new_file_ns)
                 f.write(body)
-            f.write(updateBreakPoint(remove_base_ns(namespace), "function"))
         return ''
 
     if isinstance(node, ast.Global):
@@ -317,17 +327,14 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
 
         base_namespace = f"{namespace}\\.if"
 
-        base_path = namespace_path(base_namespace, '')
-        mkdirs(base_path, exist_ok=True)
-
         # 如果父级不是if块，则创建一个if块
         f_ns, f_name = file_ns.rsplit('\\', maxsplit=1)
         f_father_ns = file_ns_getter(f_name, f_ns, ret_raw=True)[0]
-        if f_father_ns[".__level__"] != ".if":
+        if f_father_ns[".__level__"] != "if":
             file_ns_setter(
                 ".if", join_file_ns(file_ns, ".if"),
                 file_ns,
-                ".if", "folder"
+                "if", "folder", namespace
             )
             new_file_ns = join_file_ns(file_ns, ".if")
             mkdirs(file_ns_path(new_file_ns), exist_ok=True)
@@ -338,13 +345,13 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
         file_ns_setter(
             f"{block_uid}.mcfunction", if_block_ns,
             new_file_ns,
-            "if", "mcfunction"
+            "if", "mcfunction", namespace
         )
         else_block_ns = join_file_ns(new_file_ns, f"{block_uid}-else.mcfunction")
         file_ns_setter(
             f"{block_uid}-else.mcfunction", else_block_ns,
             new_file_ns,
-            "if", "mcfunction"
+            "if", "mcfunction", namespace
         )
         # 生成并写入if块
         with SplitBreakPoint(file_ns_path(if_block_ns), namespace, encoding="utf-8") as f:
@@ -352,14 +359,14 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
             for statement in node.body:
                 body = generate_code(statement, namespace, new_file_ns)
                 f.write(body)
-            f.write(updateBreakPoint(remove_base_ns(namespace), "if"))
+            f.write(updateBreakPoint(file_ns))
         # 生成并写入else块
         with SplitBreakPoint(file_ns_path(else_block_ns), namespace, encoding="utf-8") as f:
             f.write(DEBUG_OBJECTIVE({"text": "进入False分支"}, objective=SB_TEMP, name=f"{namespace}{ResultExt}"))
             for statement in node.orelse:
                 body = generate_code(statement, namespace, new_file_ns)
                 f.write(body)
-            f.write(updateBreakPoint(remove_base_ns(namespace), "if"))
+            f.write(updateBreakPoint(file_ns))
 
         command = ''
         func_path = f"{base_namespace}\\{block_uid}".replace('\\', '/')
@@ -504,13 +511,12 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
             Flags.TRUE, SB_FLAGS
         )
 
-        # command += FORCE_COMMENT(BreakPointFlag( todo
-        #     "return",
-        #     name=breakpoint_id,
-        #     objective=SB_TEMP
-        # ))
-        # raiseBreakPoint(remove_base_ns(namespace), "return", name=breakpoint_id, objective=SB_TEMP, level="line")
-        command += updateBreakPoint(remove_base_ns(namespace), "line")
+        command += FORCE_COMMENT(BreakPointFlag(
+            "return",
+            name=breakpoint_id,
+            objective=SB_TEMP
+        ))
+        raiseBreakPoint(file_ns, "return", name=breakpoint_id, objective=SB_TEMP)
 
         return command
 
@@ -789,14 +795,16 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
     if isinstance(node, ast.Call):
         is_builtin: bool = False
         if isinstance(node.func, ast.Name) and node.func.id in dir(__builtins__):
-            is_builtin = True
-            func_name = node.func.id
-            func_ns = f"python:built-in\\{func_name}"
-            ns = "python:built-in"
+            raise Exception("暂不支持python内置函数")
+            # is_builtin = True
+            # func_name = node.func.id
+            # func_ns = f"python:built-in\\{func_name}"
+            # ns = "python:built-in"
         else:
             func_name, func_ns, ns = node_to_namespace(node.func, namespace, not_exists_ok=True, ns_type="function")
 
         commands: str = ''
+        commands += COMMENT(f"Call:调用函数")
 
         # 如果是模版函数，则调用模版函数
         template_func_name = f"{ns.split(':', maxsplit=1)[1]}.{func_name}"
@@ -809,7 +817,7 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
                 {"text": f"  "},
                 {"text": f"{root_namespace(ns)}", "color": "gray"}
             )
-            commands += func_ns(node.args, node.keywords, namespace=namespace)
+            commands += func_ns(node.args, node.keywords, namespace=namespace, file_namespace=file_ns)
             commands += COMMENT(f"Template.Call:调用模版函数结束")
             return commands
 
@@ -862,10 +870,13 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
 
         commands += DEBUG_TEXT(DebugTip.Call, {"text": f"{func_path}", "color": "dark_purple"})
 
-        file_ns_setter(f"{func_name}.mcfunction$link", func_ns, file_ns, "function", "$link")
+        file_ns_setter(
+            f"{func_name}.mcfunction$link", func_ns.split(':', maxsplit=1)[1], file_ns,
+            "function", "$link", namespace
+        )
 
         # 当在函数中调用函数时
-        if namespace != join_base_ns(root_namespace(namespace)):
+        if namespace != join_base_ns(root_namespace(namespace)) + "\\module":
             store, load = store_local(namespace)
             commands += store
             commands += f"function {func_path}\n"
@@ -888,6 +899,8 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
 
 
 def _deep_sorted(d: dict | OrderedDict) -> OrderedDict | Any:
+    if type(d) is set:
+        d = list(d)
     if type(d) in (list, tuple):
         _processed = []
         for item in d:
@@ -917,7 +930,7 @@ def main():
     TEMPLATE_PATH = "./template"
 
     BASE_NAMESPACE = "source_code:"
-    file_name = "recursive_call"
+    file_name = "if_sub"
 
     start_t = time.time()
     with open(os.path.join(READ_PATH, f"{file_name}.py"), mode='r', encoding="utf-8") as _:
@@ -958,9 +971,6 @@ def main():
     print()
     _dumped_temp_map = _debug_dump(temp_map)
     print(f"[DEBUG] TemplateScoreboardVariableMap={_dumped_temp_map}")
-    print()
-    _dumped_breakpoint_tree = _debug_dump(BreakPointNamespace)
-    print(f"[DEBUG] BreakPointTree={_dumped_breakpoint_tree}")
     print()
     _dumped_file_map = _debug_dump(file_ns_map)
     print(f"[DEBUG] FileMap={_dumped_file_map}")

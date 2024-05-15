@@ -233,20 +233,25 @@ def store_local(namespace: str) -> tuple[str, str]:
 file_ns_map: OrderedDict[str, OrderedDict[str, ...]] = OrderedDict()
 
 
-def file_ns_init(file_namespace: str, level: str, ns: str) -> None:
+def file_ns_init(file_namespace: str, level: str | None, file_ns_type: str, ns: str) -> None:
     file_ns_map[file_namespace] = OrderedDict({
         ".__path__": file_namespace,
         ".__level__": level,
+        ".__type__": file_ns_type,
         ".__namespace__": ns,
     })
 
 
-def file_ns_setter(name: str, targe_path: str, file_namespace: str, level: str | None, file_ns_type: str) -> None:
+def file_ns_setter(
+        name: str, targe_path: str, file_namespace: str,
+        level: str | None, file_ns_type: str, ns: str
+) -> None:
     data = {
         name: {
             ".__path__": targe_path,
             ".__level__": level,
             ".__type__": file_ns_type,
+            ".__namespace__": ns,
         }
     }
 

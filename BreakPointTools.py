@@ -9,16 +9,14 @@ import re
 import os
 import warnings
 from typing import Callable
+from NamespaceTools import file_ns_getter
 
-Processor = Callable[[str, str | None, ...], str | None | tuple[str, bool]]
+Processor = Callable[[str | None, str | None, ...], str | None | tuple[str, bool]]
 
-BreakPointProcessor: dict[str | None, Processor] = {
-    None: lambda _, __, *args: None,
-}
+BreakPointProcessor: dict[str | None, Processor] = {}
 
 
-BreakPointNamespace: dict[str, dict[str, list[dict[str, ...]]] | dict[str, dict[str, ...]]] = {}
-BreakPointLevels: list[str] = ["if", "function", "module", "line"]
+BreakPointLevels: list[str] = ["module", "function", "if"]
 
 
 def BreakPointFlag(func: str | None, *args, **kwargs):
@@ -43,60 +41,70 @@ def register_processor(name: str | None):
     return decorator
 
 
-def raiseBreakPoint(namespace: str, func: str | None, level: str, *args, **kwargs):
-    last = BreakPointNamespace
-    target_node: dict | None = None
-    name = None
+_BP_ID: int = 0
 
-    for name in namespace.split('\\'):
-        if name not in last:
-            last[name] = {}
-        target_node = last
-        last = last[name]
 
-    if ":breakpoints" not in target_node[name]:
-        last[":breakpoints"][level] = []
+def raiseBreakPoint(file_namespace: str, func: str | None, *func_args, **func_kwargs):
+    global _BP_ID
+    f_ns, f_name = file_namespace.rsplit('\\', maxsplit=1)
+    target_f_ns: dict = file_ns_getter(f_name, f_ns, ret_raw=True)[0]
 
-    target_node[name][":breakpoints"].append({
+    if ":breakpoints" not in target_f_ns:
+        target_f_ns[":breakpoints"] = {}
+
+    data = {
+        "id": _BP_ID,
         "func": func,
-        "args": args,
-        "kwargs": kwargs,
-    })
+        "args": func_args,
+        "kwargs": func_kwargs,
+    }
+    target_f_ns[":breakpoints"][_BP_ID] = data
+    _BP_ID += 1
 
 
-def updateBreakPoint(namespace: str, level):
-    return ''
+def updateBreakPoint(file_namespace: str):
+
+    f_ns, f_name = file_namespace.rsplit('\\', maxsplit=1)
+    target_f_ns: dict[str, dict[str, ...] | str] = file_ns_getter(f_name, f_ns, ret_raw=True)[0]
+
+    level: str = target_f_ns[".__level__"]
+
     if level not in BreakPointLevels:
         raise Exception(f"SBP: Unknown level: \'{level}\', please check if it is registered in the code.")
 
-    last = BreakPointNamespace
-
-    for name in namespace.split('\\'):
-        if name not in last:
-            last[name] = {}
-        last = last[name]
-
-    def _update(func_key, args, kwargs):
-        try:
-            func = BreakPointProcessor[func_key]
-        except KeyError:
-            raise Exception(f"SBP: Unknown function: \'{func_key}\', please check if it is registered in the code.")
-
-        result, keep_raise = func(namespace, level, *args, **kwargs)
-
-        if keep_raise:
-            if '\\' in namespace:
-                father = namespace.split('\\', maxsplit=1)[0]
-            else:
-                father = namespace
-            raiseBreakPoint(father, func_key, *args, **kwargs)
-
-        result = '' if result is None else result
-        return result
+    if ":breakpoints" not in target_f_ns:
+        target_f_ns[":breakpoints"] = {}
 
     command = ''
-    for _breakpoint in last[":breakpoints"][level]:
-        command += _update(_breakpoint["func"], _breakpoint["args"], _breakpoint["kwargs"])
+
+    for file_name in target_f_ns:
+        if not file_name.endswith("$link"):
+            continue
+
+        raw_f_namespace = target_f_ns[file_name][".__path__"]
+        rf_ns, rf_name = raw_f_namespace.rsplit('\\', maxsplit=1)
+        raw_f_ns = file_ns_getter(rf_name, rf_ns, ret_raw=True)[0]
+
+        if ":breakpoints" not in raw_f_ns:
+            continue
+
+        for bp_id, bp_data in raw_f_ns[":breakpoints"].items():
+            keep_raise = False
+            try:
+                processor = BreakPointProcessor[bp_data["func"]]
+            except KeyError:
+                warnings.warn(
+                    f"SBP: Unknown function: \'{bp_data['func']}\', please check if it is registered in the code.",
+                    UserWarning,
+                    stacklevel=2
+                )
+            else:
+                cmd, keep_raise = processor(None, level, *bp_data["args"], **bp_data["kwargs"])
+                command += cmd
+
+            if keep_raise:
+                raiseBreakPoint(f_name, f_ns, bp_data["func"], *bp_data["args"], **bp_data["kwargs"])
+
     return command
 
 
@@ -226,7 +234,6 @@ class SplitBreakPoint:
 
 __all__ = (
     "BreakPointFlag",
-    "BreakPointNamespace",
 
     "raiseBreakPoint",
     "updateBreakPoint",

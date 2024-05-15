@@ -29,11 +29,11 @@ def _init_flags(name, objective):
 
 IgnoreEncode: bool = False
 
-_UID = 0
+_SB_ID = 0
 
 
 def gen_code(name, objective):
-    global _UID
+    global _SB_ID
 
     init_objective(objective)
 
@@ -48,8 +48,8 @@ def gen_code(name, objective):
         init_name(name, objective)
         return name
 
-    _UID += 1
-    code = hex(_UID)
+    _SB_ID += 1
+    code = hex(_SB_ID)
     SB_Name2Code[objective][name] = code
     SB_Code2Name[objective][code] = name
 

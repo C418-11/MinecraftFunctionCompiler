@@ -1,9 +1,12 @@
+from template.MinecraftSupport.builtin import tprint
+
+
 a = 2
 b = 2
 
 if a < b:
-    print(b - a)
+    tprint(b - a)
 elif a > b:
-    print(a - b)
+    tprint(a - b)
 else:
-    print(-1)
+    tprint(-1)

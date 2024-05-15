@@ -53,14 +53,12 @@ class UnnecessaryParameter:
         return "<<UnnecessaryParameter>>"
 
 
-print_args = OrderedDict([
-    ('*', DefaultArgType('*', UnnecessaryParameter())),
-    *[(('*' + str(i)), DefaultArgType('*' + str(i), UnnecessaryParameter())) for i in range(1, 10)]
-])
+# print_args = OrderedDict([
+#     ('*', DefaultArgType('*', UnnecessaryParameter())),
+#     *[(('*' + str(i)), DefaultArgType('*' + str(i), UnnecessaryParameter())) for i in range(1, 10)]
+# ])
 
-func_args: dict[str, OrderedDict[str, ArgType | DefaultArgType]] = {
-    "python:built-in\\print": print_args,
-}
+func_args: dict[str, OrderedDict[str, ArgType | DefaultArgType]] = {}
 
 __all__ = (
     "func_args",

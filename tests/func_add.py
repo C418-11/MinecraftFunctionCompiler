@@ -1,5 +1,8 @@
+from template.MinecraftSupport.builtin import tprint
+
+
 def add(a, b):
     return a + b
 
 
-print(add(1, 2))
+tprint(add(1, 2))
