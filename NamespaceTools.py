@@ -31,6 +31,13 @@ def root_namespace(namespace: str) -> str:
 ns_map: OrderedDict[str, OrderedDict[str, ...]] = OrderedDict()
 
 
+def ns_init(namespace: str, ns_type: str):
+    ns_map[namespace] = OrderedDict({
+        ".__namespace__": namespace,
+        ".__type__": ns_type
+    })
+
+
 def ns_setter(name: str, targe_namespace: str, namespace: str, ns_type: str = None) -> None:
     data = {
         name: {
@@ -39,12 +46,14 @@ def ns_setter(name: str, targe_namespace: str, namespace: str, ns_type: str = No
         }
     }
 
-    try:
-        last_ns, last_name = namespace.rsplit('\\', 1)
-    except ValueError:
-        ns_map[namespace].update(data)
-    else:
-        ns_map[last_ns][last_name].update(data)
+    last_map = ns_map
+    for ns in namespace.split('\\'):
+        try:
+            last_map = last_map[ns]
+        except KeyError:
+            raise KeyError(f"Namespace {namespace} not found")
+
+    last_map.update(data)
 
 
 def ns_getter(name, namespace: str, ret_raw: bool = False) -> tuple[str | dict, str]:
@@ -112,7 +121,7 @@ def node_to_namespace(
         ns: dict[str, dict[str, ...] | str]
         full_ns: str = ns[".__namespace__"]
         if ns[".__type__"] == "attribute":
-            target_ns, name = full_ns.split("|", 1)
+            target_ns, name = full_ns.rsplit("|", 1)
             return node_to_namespace(
                 ast.Name(id=name), target_ns, not_exists_ok=not_exists_ok, ns_type=ns_type
             )
@@ -141,7 +150,7 @@ temp_map: OrderedDict[str, list[str]] = OrderedDict()
 
 
 def store_local(namespace: str) -> tuple[str, str]:
-    _ns, _name = namespace.split('\\', 1)
+    _ns, _name = namespace.rsplit('\\', 1)
     local_ns: dict[str, dict[str, ...]] = ns_getter(_name, _ns, ret_raw=True)[0]
 
     ns_ls: list[str] = []
@@ -221,13 +230,86 @@ def store_local(namespace: str) -> tuple[str, str]:
     return store(), load()
 
 
+file_ns_map: OrderedDict[str, OrderedDict[str, ...]] = OrderedDict()
+
+
+def file_ns_init(file_namespace: str, level: str, ns: str) -> None:
+    file_ns_map[file_namespace] = OrderedDict({
+        ".__path__": file_namespace,
+        ".__level__": level,
+        ".__namespace__": ns,
+    })
+
+
+def file_ns_setter(name: str, targe_path: str, file_namespace: str, level: str | None, file_ns_type: str) -> None:
+    data = {
+        name: {
+            ".__path__": targe_path,
+            ".__level__": level,
+            ".__type__": file_ns_type,
+        }
+    }
+
+    last_map = file_ns_map
+    for ns_path in file_namespace.split('\\'):
+        try:
+            last_map = last_map[ns_path]
+        except KeyError:
+            raise KeyError(f"Namespace {file_namespace} not found")
+
+    last_map.update(data)
+
+
+def file_ns_getter(name: str, namespace: str, ret_raw: bool = False):
+
+    last_map: dict[str, dict[str, ...]] = file_ns_map
+    last_result: dict | None = None
+
+    ns_ls: list[str] = []
+    last_ns: list[str] = []
+
+    for ns_name in namespace.split('\\'):
+        try:
+            last_map = last_map[ns_name]
+        except KeyError:
+            raise KeyError(f"{name} not found in namespace {namespace}")
+        if name in last_map:
+            last_result = last_map[name]
+            last_ns = ns_ls
+
+        ns_ls.append(ns_name)
+
+    if name in last_map:
+        last_result = last_map[name]
+        last_ns = ns_ls
+
+    if last_result is None:
+        raise KeyError(f"{name} not found in namespace {namespace}")
+
+    if not ret_raw:
+        last_result = last_result[".__path__"]
+
+    return last_result, '\\'.join(last_ns)
+
+
+def join_file_ns(path: str, *args):
+    return path + '\\' + '\\'.join(args)
+
+
 __all__ = (
     "ns_map",
-    "temp_map",
-
+    "ns_init",
     "root_namespace",
     "ns_setter",
     "ns_getter",
     "node_to_namespace",
+
+    "temp_map",
     "store_local",
+
+    "file_ns_map",
+    "file_ns_init",
+    "file_ns_setter",
+    "file_ns_getter",
+    "join_file_ns"
 )

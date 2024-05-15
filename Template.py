@@ -90,7 +90,7 @@ def register_func(python_func):
             return func(*new_args, **new_kwargs)
 
         package_name = inspect.getmodule(func).__name__
-        full_path = f"{package_name}.{func.__name__}"
+        full_path = f"{package_name}\\module.{func.__name__}"
 
         template_funcs[full_path] = wrapper
 

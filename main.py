@@ -7,25 +7,29 @@ import os
 import time
 import warnings
 from collections import OrderedDict
-from functools import lru_cache
 from itertools import zip_longest
 from typing import Any
 
 from Constant import Flags
 from Constant import ResultExt
 from Constant import ScoreBoards
-from DebuggingTools import FORCE_COMMENT
 from DebuggingTools import COMMENT
 from DebuggingTools import DEBUG_OBJECTIVE
 from DebuggingTools import DEBUG_TEXT
 from DebuggingTools import DebugTip
 from NamespaceTools import node_to_namespace
+from NamespaceTools import ns_init
+from NamespaceTools import file_ns_init
 from NamespaceTools import ns_getter
 from NamespaceTools import ns_map
 from NamespaceTools import ns_setter
 from NamespaceTools import root_namespace
 from NamespaceTools import store_local
 from NamespaceTools import temp_map
+from NamespaceTools import file_ns_map
+from NamespaceTools import file_ns_setter
+from NamespaceTools import file_ns_getter
+from NamespaceTools import join_file_ns
 from ParameterTypes import ArgType
 from ParameterTypes import DefaultArgType
 from ParameterTypes import UnnecessaryParameter
@@ -44,11 +48,11 @@ from ScoreboardTools import init_name
 from Template import check_template
 from Template import init_template
 from Template import template_funcs
-from BreakPointTools import register_processor
-from BreakPointTools import raiseBreakPoint
-from BreakPointTools import BreakPointTree
+# from BreakPointTools import register_processor
+# from BreakPointTools import raiseBreakPoint
+from BreakPointTools import BreakPointNamespace
 from BreakPointTools import SplitBreakPoint
-from BreakPointTools import BreakPointFlag
+# from BreakPointTools import BreakPointFlag
 from BreakPointTools import updateBreakPoint
 
 SB_ARGS: str = ScoreBoards.Args
@@ -138,7 +142,7 @@ def import_as(name: str, as_name: str | None, namespace: str, *, register_ns: bo
     if is_file and not is_template:
         new_namespace = join_base_ns(name)
         if register_ns:
-            ns_setter(safe_as_name, new_namespace, namespace, "module")
+            ns_setter(safe_as_name, f"{new_namespace}\\module", namespace, "module")
 
         def _load():
             nonlocal command
@@ -151,7 +155,7 @@ def import_as(name: str, as_name: str | None, namespace: str, *, register_ns: bo
             print(ast.dump(tree, indent=4))
             print("------------------------------")
 
-            generate_code(tree, new_namespace)
+            generate_code(tree, new_namespace, name)
             end_t = time.time()
             print(f"编译导入模块 {sourcefile_path}, 耗时{end_t - start_t}秒")
 
@@ -165,75 +169,81 @@ def import_as(name: str, as_name: str | None, namespace: str, *, register_ns: bo
 
     if is_file and is_template:
         init_template(name)
-        ns_map[join_base_ns(name)] = OrderedDict(
-            {
-                ".__namespace__": join_base_ns(name),
-                ".__type__": "module",
-            }
-        )
+        ns_init(join_base_ns(name), "module")
+        ns_setter("module", f"{join_base_ns(name)}\\module", join_base_ns(name), "module")
     elif is_template:
-        ns_map[join_base_ns(name)] = OrderedDict(
-            {
-                ".__namespace__": join_base_ns(name),
-                ".__type__": "package",
-            }
-        )
+        ns_init(join_base_ns(name), "package")
 
     return command, is_file
 
 
-@lru_cache(maxsize=None)
-def cache_mkdirs(path: str, *, exist_ok: bool = False):
+def mkdirs(path: str, *, exist_ok: bool = False):
     os.makedirs(path, exist_ok=exist_ok)
 
 
-@register_processor("return")
-def sbp_return(func_path, level, *, name, objective):
-    command = ''
-    if level is not None:
-        command += FORCE_COMMENT(BreakPointFlag(
-            "return",
-            name=name,
-            objective=objective
-        ))
+# @register_processor("return") todo
+# def sbp_return(func_path, level, *, name, objective):
+#     command = ''
+#     if level is not None:
+#         command += FORCE_COMMENT(BreakPointFlag(
+#             "return",
+#             name=name,
+#             objective=objective
+#         ))
+#
+#         keep_raise: bool = True
+#         if level == "function":
+#             command += SB_RESET(name, objective)
+#             keep_raise = False
+#         return command, keep_raise
+#     command += COMMENT("Return.BreakPoint")
+#     command += CHECK_SB(
+#         SBCheckType.UNLESS,
+#         name, objective,
+#         SBCompareType.EQUAL,
+#         Flags.TRUE, SB_FLAGS,
+#         f"function {func_path}"
+#     )
+#
+#     return command
 
-        keep_raise: bool = True
-        if level == "function":
-            command += SB_RESET(name, objective)
-            keep_raise = False
-        return command, keep_raise
-    command += COMMENT("Return.BreakPoint")
-    command += CHECK_SB(
-        SBCheckType.UNLESS,
-        name, objective,
-        SBCompareType.EQUAL,
-        Flags.TRUE, SB_FLAGS,
-        f"function {func_path}"
-    )
 
-    return command
+def file_ns_path(path: str, *args):
+    return os.path.normpath(os.path.join(SAVE_PATH, path, *args))
 
 
-def generate_code(node, namespace: str) -> str:
+def generate_code(node, namespace: str, file_ns: str) -> str:
     if node is None:
         return SB_ASSIGN(
             f"{namespace}{ResultExt}", SB_TEMP,
             Flags.FALSE, SB_FLAGS,
         )
-    cache_mkdirs(namespace_path(namespace, ''), exist_ok=True)
 
     if isinstance(node, ast.Module):
-        ns_map[namespace] = OrderedDict({
-            ".__namespace__": namespace,
-            ".__type__": "module",
-        })
-        temp_map[namespace] = []
-        with SplitBreakPoint(namespace_path(namespace, ".__module.mcfunction"), namespace, encoding="utf-8") as f:
+        ns_init(f"{namespace}", "file")
+        temp_map[f"{namespace}\\module"] = []
+
+        # 注册路径
+        mkdirs(file_ns_path(file_ns), exist_ok=True)
+        file_ns_init(file_ns, "folder", namespace)
+        mkdirs(file_ns_path(file_ns, "module"), exist_ok=True)
+        ns_setter("module", f"{namespace}\\module", namespace, "module")
+        file_ns_setter(
+            "module.mcfunction", join_file_ns(file_ns, "module.mcfunction"), file_ns,
+            "module", "mcfunction"
+        )
+        file_ns_setter(
+            "module", join_file_ns(file_ns, "module"), file_ns,
+            None, "folder"
+        )
+
+        # 生成并写入
+        with SplitBreakPoint(file_ns_path(file_ns, "module.mcfunction"), namespace, encoding="utf-8") as f:
             f.write(COMMENT(f"Generated by MCFC"))
             f.write(COMMENT(f"Github: https://github.com/C418-11/MinecraftFunctionCompiler"))
             f.write('\n')
             for statement in node.body:
-                c = generate_code(statement, namespace)
+                c = generate_code(statement, f"{namespace}\\module", join_file_ns(file_ns, "module"))
                 f.write(c)
 
         return ''
@@ -259,7 +269,7 @@ def generate_code(node, namespace: str) -> str:
 
             safe_as_name = n.asname or n.name
 
-            ns_setter(safe_as_name, f"{join_base_ns(node.module)}|{n.name}", namespace, "attribute")
+            ns_setter(safe_as_name, f"{join_base_ns(node.module)}\\module|{n.name}", namespace, "attribute")
 
             if is_file:
                 continue
@@ -269,24 +279,37 @@ def generate_code(node, namespace: str) -> str:
         return command
 
     if isinstance(node, ast.FunctionDef):
-        with SplitBreakPoint(namespace_path(namespace, f"{node.name}.mcfunction"), namespace, encoding="utf-8") as f:
+        # 注册路径
+        new_file_ns = join_file_ns(file_ns, f"{node.name}")
+        mkdirs(file_ns_path(new_file_ns), exist_ok=True)
+        file_ns_setter(
+            f"{node.name}", new_file_ns, file_ns,
+            None, "folder"
+        )
+        file_ns_setter(
+            f"{node.name}.mcfunction", join_file_ns(file_ns, f"{node.name}.mcfunction"), file_ns,
+            "function", "mcfunction"
+        )
+
+        # 生成并写入
+        with SplitBreakPoint(file_ns_path(file_ns, f"{node.name}.mcfunction"), namespace, encoding="utf-8") as f:
             ns_setter(node.name, f"{namespace}\\{node.name}", namespace, "function")
             temp_map[f"{namespace}\\{node.name}"] = []
 
             f.write(COMMENT(f"FunctionDef:函数头"))
-            args = generate_code(node.args, f"{namespace}\\{node.name}")
+            args = generate_code(node.args, f"{namespace}\\{node.name}", new_file_ns)
             f.write(args)
             f.write(COMMENT(f"FunctionDef:函数体"))
             for statement in node.body:
-                body = generate_code(statement, f"{namespace}\\{node.name}")
+                body = generate_code(statement, f"{namespace}\\{node.name}", new_file_ns)
                 f.write(body)
             f.write(updateBreakPoint(remove_base_ns(namespace), "function"))
         return ''
 
     if isinstance(node, ast.Global):
-        root_ns = join_base_ns(root_namespace(namespace))
         for n in node.names:
-            ns_setter(n, f"{root_ns}.{n}", namespace, "variable")
+            target_ns = ns_getter(n, namespace)[0]
+            ns_setter(n, target_ns, namespace, "variable")
         return ''
 
     if isinstance(node, ast.If):
@@ -295,25 +318,53 @@ def generate_code(node, namespace: str) -> str:
         base_namespace = f"{namespace}\\.if"
 
         base_path = namespace_path(base_namespace, '')
-        cache_mkdirs(base_path, exist_ok=True)
+        mkdirs(base_path, exist_ok=True)
 
-        with SplitBreakPoint(os.path.join(base_path, f"{block_uid}.mcfunction"), namespace, encoding="utf-8") as f:
+        # 如果父级不是if块，则创建一个if块
+        f_ns, f_name = file_ns.rsplit('\\', maxsplit=1)
+        f_father_ns = file_ns_getter(f_name, f_ns, ret_raw=True)[0]
+        if f_father_ns[".__level__"] != ".if":
+            file_ns_setter(
+                ".if", join_file_ns(file_ns, ".if"),
+                file_ns,
+                ".if", "folder"
+            )
+            new_file_ns = join_file_ns(file_ns, ".if")
+            mkdirs(file_ns_path(new_file_ns), exist_ok=True)
+        else:
+            new_file_ns = file_ns
+        # 注册路径
+        if_block_ns = join_file_ns(new_file_ns, f"{block_uid}.mcfunction")
+        file_ns_setter(
+            f"{block_uid}.mcfunction", if_block_ns,
+            new_file_ns,
+            "if", "mcfunction"
+        )
+        else_block_ns = join_file_ns(new_file_ns, f"{block_uid}-else.mcfunction")
+        file_ns_setter(
+            f"{block_uid}-else.mcfunction", else_block_ns,
+            new_file_ns,
+            "if", "mcfunction"
+        )
+        # 生成并写入if块
+        with SplitBreakPoint(file_ns_path(if_block_ns), namespace, encoding="utf-8") as f:
             f.write(DEBUG_OBJECTIVE({"text": "进入True分支"}, objective=SB_TEMP, name=f"{namespace}{ResultExt}"))
             for statement in node.body:
-                body = generate_code(statement, namespace)
+                body = generate_code(statement, namespace, new_file_ns)
                 f.write(body)
             f.write(updateBreakPoint(remove_base_ns(namespace), "if"))
-        with SplitBreakPoint(os.path.join(base_path, f"{block_uid}-else.mcfunction"), namespace, encoding="utf-8") as f:
+        # 生成并写入else块
+        with SplitBreakPoint(file_ns_path(else_block_ns), namespace, encoding="utf-8") as f:
             f.write(DEBUG_OBJECTIVE({"text": "进入False分支"}, objective=SB_TEMP, name=f"{namespace}{ResultExt}"))
             for statement in node.orelse:
-                body = generate_code(statement, namespace)
+                body = generate_code(statement, namespace, new_file_ns)
                 f.write(body)
             f.write(updateBreakPoint(remove_base_ns(namespace), "if"))
 
         command = ''
         func_path = f"{base_namespace}\\{block_uid}".replace('\\', '/')
 
-        command += generate_code(node.test, namespace)
+        command += generate_code(node.test, namespace, file_ns)
 
         command += COMMENT(f"IF:检查条件")
         command += CHECK_SB(
@@ -409,6 +460,7 @@ def generate_code(node, namespace: str) -> str:
         command = ''
         command += COMMENT(f"Attribute:读取属性", base_ns=base_namespace, attr=node.attr)
 
+        print(json.dumps(ns_map, indent=4))
         command += SB_ASSIGN(
             f"{namespace}{ResultExt}", SB_TEMP,
             f"{attr_namespace}", SB_VARS
@@ -420,11 +472,11 @@ def generate_code(node, namespace: str) -> str:
         command = ''
         command += COMMENT("Return:计算返回值")
 
-        command += generate_code(node.value, namespace)
+        command += generate_code(node.value, namespace, file_ns)
 
         command += COMMENT("Return:保存返回值")
 
-        ns, name = namespace.split('\\', 1)
+        ns, name = namespace.rsplit('\\', 1)
         func_map: dict = ns_getter(name, ns, ret_raw=True)[0]
         if func_map[".__type__"] != "function":
             raise Exception("返回语句不在函数内")
@@ -452,12 +504,12 @@ def generate_code(node, namespace: str) -> str:
             Flags.TRUE, SB_FLAGS
         )
 
-        command += FORCE_COMMENT(BreakPointFlag(
-            "return",
-            name=breakpoint_id,
-            objective=SB_TEMP
-        ))
-        raiseBreakPoint(remove_base_ns(namespace), "return", name=breakpoint_id, objective=SB_TEMP)
+        # command += FORCE_COMMENT(BreakPointFlag( todo
+        #     "return",
+        #     name=breakpoint_id,
+        #     objective=SB_TEMP
+        # ))
+        # raiseBreakPoint(remove_base_ns(namespace), "return", name=breakpoint_id, objective=SB_TEMP, level="line")
         command += updateBreakPoint(remove_base_ns(namespace), "line")
 
         return command
@@ -467,7 +519,7 @@ def generate_code(node, namespace: str) -> str:
         command += COMMENT(f"BinOp:二进制运算", op=type(node.op).__name__)
 
         command += COMMENT(f"BinOp:处理左值")
-        command += generate_code(node.left, namespace)
+        command += generate_code(node.left, namespace, file_ns)
 
         process_uid = newUid()
 
@@ -481,7 +533,7 @@ def generate_code(node, namespace: str) -> str:
         command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
         command += COMMENT(f"BinOp:处理右值")
-        command += generate_code(node.right, namespace)
+        command += generate_code(node.right, namespace, file_ns)
 
         if isinstance(node.op, ast.Add):
             command += SB_OP(
@@ -530,7 +582,7 @@ def generate_code(node, namespace: str) -> str:
         command = ''
 
         command += COMMENT(f"UnaryOp:一元操作", op=type(node.op).__name__)
-        command += generate_code(node.operand, namespace)
+        command += generate_code(node.operand, namespace, file_ns)
 
         if isinstance(node.op, ast.Not):
             command += COMMENT(f"UnaryOp:运算", op="Not(not)")
@@ -594,7 +646,7 @@ def generate_code(node, namespace: str) -> str:
         })
 
         command += COMMENT(f"Compare:处理左值")
-        command += generate_code(node.left, namespace)
+        command += generate_code(node.left, namespace, file_ns)
 
         command += SB_ASSIGN(
             f"{namespace}.*CompareLeft", SB_TEMP,
@@ -619,7 +671,7 @@ def generate_code(node, namespace: str) -> str:
             )
 
             command += COMMENT(f"Compare:处理右值")
-            command += generate_code(node.comparators[i], namespace)
+            command += generate_code(node.comparators[i], namespace, file_ns)
 
             if isinstance(op, ast.Eq):
                 command += COMMENT(f"Compare:比较", op="Eq(==)")
@@ -674,7 +726,7 @@ def generate_code(node, namespace: str) -> str:
         return command
 
     if isinstance(node, ast.Expr):
-        command = generate_code(node.value, namespace)
+        command = generate_code(node.value, namespace, file_ns)
         try:
             cmd = SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
         except KeyError:
@@ -708,7 +760,7 @@ def generate_code(node, namespace: str) -> str:
         return command
 
     if isinstance(node, ast.Assign):
-        command = generate_code(node.value, namespace)
+        command = generate_code(node.value, namespace, file_ns)
         from_namespace = f"{namespace}{ResultExt}"
 
         for t in node.targets:
@@ -787,7 +839,7 @@ def generate_code(node, namespace: str) -> str:
                 value = ast.Constant(value=this_func_args[name].default)
 
             commands += COMMENT("Call:计算参数值")
-            commands += generate_code(value, namespace)
+            commands += generate_code(value, namespace, file_ns)
 
             commands += COMMENT("Call:传递参数", name=name)
             if is_builtin:
@@ -809,6 +861,9 @@ def generate_code(node, namespace: str) -> str:
         func_path = func_ns.replace('\\', '/')
 
         commands += DEBUG_TEXT(DebugTip.Call, {"text": f"{func_path}", "color": "dark_purple"})
+
+        file_ns_setter(f"{func_name}.mcfunction$link", func_ns, file_ns, "function", "$link")
+
         # 当在函数中调用函数时
         if namespace != join_base_ns(root_namespace(namespace)):
             store, load = store_local(namespace)
@@ -862,7 +917,7 @@ def main():
     TEMPLATE_PATH = "./template"
 
     BASE_NAMESPACE = "source_code:"
-    file_name = "breakpoint_test"
+    file_name = "recursive_call"
 
     start_t = time.time()
     with open(os.path.join(READ_PATH, f"{file_name}.py"), mode='r', encoding="utf-8") as _:
@@ -871,7 +926,7 @@ def main():
     print(ast.dump(tree, indent=4))
     print()
 
-    generate_code(tree, join_base_ns(file_name))
+    generate_code(tree, join_base_ns(file_name), file_name)
     end_t = time.time()
 
     print(f"[DEBUG] TimeUsed={end_t - start_t}")
@@ -904,8 +959,11 @@ def main():
     _dumped_temp_map = _debug_dump(temp_map)
     print(f"[DEBUG] TemplateScoreboardVariableMap={_dumped_temp_map}")
     print()
-    _dumped_breakpoint_tree = _debug_dump(BreakPointTree)
+    _dumped_breakpoint_tree = _debug_dump(BreakPointNamespace)
     print(f"[DEBUG] BreakPointTree={_dumped_breakpoint_tree}")
+    print()
+    _dumped_file_map = _debug_dump(file_ns_map)
+    print(f"[DEBUG] FileMap={_dumped_file_map}")
     print()
 
 

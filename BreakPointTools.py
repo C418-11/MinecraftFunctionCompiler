@@ -17,7 +17,7 @@ BreakPointProcessor: dict[str | None, Processor] = {
 }
 
 
-BreakPointTree: dict[str, list[dict[str, ...]] | dict[str, ...]] = {}
+BreakPointNamespace: dict[str, dict[str, list[dict[str, ...]]] | dict[str, dict[str, ...]]] = {}
 BreakPointLevels: list[str] = ["if", "function", "module", "line"]
 
 
@@ -43,8 +43,8 @@ def register_processor(name: str | None):
     return decorator
 
 
-def raiseBreakPoint(namespace: str, func: str | None, *args, **kwargs):
-    last = BreakPointTree
+def raiseBreakPoint(namespace: str, func: str | None, level: str, *args, **kwargs):
+    last = BreakPointNamespace
     target_node: dict | None = None
     name = None
 
@@ -55,7 +55,7 @@ def raiseBreakPoint(namespace: str, func: str | None, *args, **kwargs):
         last = last[name]
 
     if ":breakpoints" not in target_node[name]:
-        last[":breakpoints"] = []
+        last[":breakpoints"][level] = []
 
     target_node[name][":breakpoints"].append({
         "func": func,
@@ -65,10 +65,11 @@ def raiseBreakPoint(namespace: str, func: str | None, *args, **kwargs):
 
 
 def updateBreakPoint(namespace: str, level):
+    return ''
     if level not in BreakPointLevels:
         raise Exception(f"SBP: Unknown level: \'{level}\', please check if it is registered in the code.")
 
-    last = BreakPointTree
+    last = BreakPointNamespace
 
     for name in namespace.split('\\'):
         if name not in last:
@@ -94,8 +95,7 @@ def updateBreakPoint(namespace: str, level):
         return result
 
     command = ''
-    print(BreakPointTree, last)
-    for _breakpoint in last[":breakpoints"]:
+    for _breakpoint in last[":breakpoints"][level]:
         command += _update(_breakpoint["func"], _breakpoint["args"], _breakpoint["kwargs"])
     return command
 
@@ -209,6 +209,11 @@ class SplitBreakPoint:
             return True
         return False
 
+    def close(self):
+        if not self.closed:
+            self._open_file.close()
+            self.closed = True
+
     def __enter__(self):
         if self.closed:
             raise Exception("File is closed")
@@ -221,7 +226,7 @@ class SplitBreakPoint:
 
 __all__ = (
     "BreakPointFlag",
-    "BreakPointTree",
+    "BreakPointNamespace",
 
     "raiseBreakPoint",
     "updateBreakPoint",
