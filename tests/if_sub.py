@@ -1,6 +1,5 @@
 from template.MinecraftSupport.builtin import tprint
 
-
 a = 2
 b = 2
 

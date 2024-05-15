@@ -95,7 +95,8 @@ def register_func(func_for_python):
             try:
                 return func_for_compile(*new_args, **new_kwargs, **required_kwargs)
             except TypeError as e:
-                cmp = re.compile(fr"{func_for_compile.__name__}\(\)\sgot\san\sunexpected\skeyword\sargument\s'namespace'")
+                cmp = re.compile(
+                    fr"{func_for_compile.__name__}\(\)\sgot\san\sunexpected\skeyword\sargument\s'namespace'")
                 if not cmp.match(str(e)):
                     raise
 

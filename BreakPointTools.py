@@ -5,16 +5,16 @@ __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
 import json
-import re
 import os
+import re
 import warnings
 from typing import Callable
+
 from NamespaceTools import file_ns_getter
 
 Processor = Callable[[str | None, str | None, ...], str | None | tuple[str, bool]]
 
 BreakPointProcessor: dict[str | None, Processor] = {}
-
 
 BreakPointLevels: list[str] = ["module", "function", "if"]
 
@@ -63,7 +63,6 @@ def raiseBreakPoint(file_namespace: str, func: str | None, *func_args, **func_kw
 
 
 def updateBreakPoint(file_namespace: str):
-
     f_ns, f_name = file_namespace.rsplit('\\', maxsplit=1)
     target_f_ns: dict[str, dict[str, ...] | str] = file_ns_getter(f_name, f_ns, ret_raw=True)[0]
 

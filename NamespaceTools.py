@@ -266,7 +266,6 @@ def file_ns_setter(
 
 
 def file_ns_getter(name: str, namespace: str, ret_raw: bool = False):
-
     last_map: dict[str, dict[str, ...]] = file_ns_map
     last_result: dict | None = None
 
