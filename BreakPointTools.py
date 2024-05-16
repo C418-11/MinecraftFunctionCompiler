@@ -16,7 +16,7 @@ Processor = Callable[[str | None, str | None, ...], str | None | tuple[str, bool
 
 BreakPointProcessor: dict[str | None, Processor] = {}
 
-BreakPointLevels: list[str] = ["module", "function", "if"]
+BreakPointLevels: set[str] = {"module", "function", "if"}
 
 
 def BreakPointFlag(func: str | None, *args, **kwargs):
@@ -157,7 +157,7 @@ class SplitBreakPoint:
         except json.JSONDecodeError:
             raise Exception("SBP: Arguments are not valid json format.")
 
-        ns_path = f"{self._namespace}/{id_name}"
+        ns_path = f"{self._namespace}\\{id_name}".replace('\\', '/')
         result = func(ns_path, None, *args, **kwargs)
 
         result = '' if result is None else result

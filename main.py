@@ -185,9 +185,9 @@ def mkdirs(path: str, *, exist_ok: bool = False):
 def sbp_return(func_path, level, *, name, objective):
     def _process_raise():
         command = ''
-        command += COMMENT("BP:Return.Raise")
         keep_raise: bool = True
         if level in ["module", "function"]:
+            command += COMMENT("BP:Return.Reset")
             command += SB_RESET(name, objective)
             keep_raise = False
         else:
@@ -504,7 +504,7 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
 
         command += SB_RESET(f"{namespace}{ResultExt}", SB_TEMP)
 
-        command += COMMENT("Return:断点")
+        command += COMMENT("BP:Return.Enable")
         breakpoint_id = f"breakpoint_return_{newUid()}"
         command += SB_ASSIGN(
             f"{breakpoint_id}", SB_TEMP,
@@ -930,7 +930,7 @@ def main():
     TEMPLATE_PATH = "./template"
 
     BASE_NAMESPACE = "source_code:"
-    file_name = "if_sub"
+    file_name = "breakpoint_test"
 
     start_t = time.time()
     with open(os.path.join(READ_PATH, f"{file_name}.py"), mode='r', encoding="utf-8") as _:
