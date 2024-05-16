@@ -8,7 +8,6 @@ import ast
 import functools
 import importlib
 import inspect
-import re
 import sys
 import traceback
 
