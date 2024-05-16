@@ -91,15 +91,17 @@ def register_func(func_for_compile):
 
         required_kwargs = {k: data[k] for k in required_parameters}
 
-        try:
-            return func_for_compile(*new_args, **new_kwargs, **required_kwargs)
-        except TypeError as e:
-            cmp = re.compile(
-                fr"{func_for_compile.__name__}\(\)\sgot\san\sunexpected\skeyword\sargument\s'namespace'")
-            if not cmp.match(str(e)):
-                raise
+        command = func_for_compile(*new_args, **new_kwargs, **required_kwargs)
+        if command is None:
+            command = '\n'
 
-        return func_for_compile(*new_args, **new_kwargs)
+        if type(command) is not str:
+            raise TypeError(f"invalid return type {type(command)}")
+
+        if not command.endswith('\n'):
+            command += '\n'
+
+        return command
 
     def decorator(func_for_python):
         package_name = inspect.getmodule(func_for_python).__name__

@@ -220,8 +220,9 @@ from Template import register_func
 下面是一个简单的用法示例
 
 ``` python
-def func_for_compile():
+def func_for_compile() -> str | None:
     # 当在编译环境下执行源码时将会执行这个函数
+    # 这个函数应该返回一个以换行分割的MC指令字符串
     pass
 
 @register_func(func_for_compile)
@@ -233,7 +234,7 @@ def func_for_python():
 我个人习惯这么写:
 
 ``` python
-def _your_func_name():
+def _your_func_name() -> str | None:
     # func for compile
     pass
 
