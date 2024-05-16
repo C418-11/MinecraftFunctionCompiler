@@ -1,1 +1,5 @@
-{"values": ["python:clear"]}
+{
+  "values": [
+    "python:clear"
+  ]
+}

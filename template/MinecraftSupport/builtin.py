@@ -4,26 +4,24 @@
 
 import json
 
+from BreakPointTools import BreakPointFlag
+from BreakPointTools import raiseBreakPoint
+from BreakPointTools import register_processor
 from Constant import Flags
-from Constant import ScoreBoards
 from Constant import RawJsons
-from ScoreboardTools import SB_RESET
+from Constant import ScoreBoards
+from DebuggingTools import COMMENT
+from DebuggingTools import FORCE_COMMENT
 from ScoreboardTools import CHECK_SB
 from ScoreboardTools import SBCheckType
 from ScoreboardTools import SBCompareType
 from ScoreboardTools import SB_ASSIGN
+from ScoreboardTools import SB_RESET
 from Template import NameNode
 from Template import register_func
-from BreakPointTools import register_processor
-from BreakPointTools import raiseBreakPoint
-from BreakPointTools import BreakPointFlag
-from DebuggingTools import FORCE_COMMENT
-from DebuggingTools import COMMENT
-
 
 SB_TEMP = ScoreBoards.Temp
 SB_FLAGS = ScoreBoards.Flags
-
 
 print_end: bool = True
 

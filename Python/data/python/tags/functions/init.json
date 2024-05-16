@@ -1,1 +1,5 @@
-{"values": ["python:init"]}
+{
+  "values": [
+    "python:init"
+  ]
+}

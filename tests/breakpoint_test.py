@@ -1,5 +1,5 @@
-from template.MinecraftSupport.builtin import tprint
 from template.MinecraftSupport.builtin import tbreakpoint
+from template.MinecraftSupport.builtin import tprint
 
 
 def main():
