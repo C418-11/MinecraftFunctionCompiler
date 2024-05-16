@@ -93,13 +93,13 @@ def remove_base_ns(namespace: str) -> str:
     return namespace[len(BASE_NAMESPACE):]
 
 
-Uid = 0
+GlobalId = 0
 
 
 def newUid() -> str:
-    global Uid
-    Uid += 1
-    return hex(Uid)[2:]
+    global GlobalId
+    GlobalId += 1
+    return hex(GlobalId)[2:]
 
 
 def alive_import(import_path: str, base: str = '') -> tuple[str | None, bool | None]:

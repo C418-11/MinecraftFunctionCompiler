@@ -32,18 +32,12 @@ def _get_default(self: dict, key: str, default):
         return default
 
 
-def _get_score(name: str, objective: str):
-    return _get_default(SB_MAP[objective], name, 0)
-
-
-@register_func(_get_score)
-def get_score(name: str, objective: str, *, namespace: str = None):
+def _get_score(name: str, objective: str, *, namespace: str = None):
     """
     判断(变量|值) 是否等于指定计分板中的值
 
     :param name: 目标
     :param objective: 计分板
-    :param namespace: 命名空间 !!!该值应当由编译器自动传入!!!
     """
 
     if namespace is None:
@@ -60,12 +54,12 @@ def get_score(name: str, objective: str, *, namespace: str = None):
     return command
 
 
-def _write_score(name: str, objective: str, value: int):
-    SB_MAP[objective][name] = value
+@register_func(_get_score)
+def get_score(name: str, objective: str):
+    return _get_default(SB_MAP[objective], name, 0)
 
 
-@register_func(_write_score)
-def write_score(name: str, objective: str, value: int, *, namespace: str):
+def _write_score(name: str, objective: str, value: int, *, namespace: str):
     """
     将值写入计分板
 
@@ -94,6 +88,11 @@ def write_score(name: str, objective: str, value: int, *, namespace: str):
     )
 
     return command
+
+
+@register_func(_write_score)
+def write_score(name: str, objective: str, value: int):
+    SB_MAP[objective][name] = value
 
 
 __all__ = (

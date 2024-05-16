@@ -55,57 +55,56 @@ def _parse_node(node, namespace: str):
     return node
 
 
-def register_func(func_for_python):
-    def decorator(func_for_compile):
-        parameter_set = set(inspect.signature(func_for_compile).parameters.keys())
+def register_func(func_for_compile):
+    parameter_set = set(inspect.signature(func_for_compile).parameters.keys())
 
-        @functools.wraps(func_for_compile)
-        def wrapper(args, kwargs, *, namespace, file_namespace):
+    @functools.wraps(func_for_compile)
+    def compile_func_wrapper(args, kwargs, *, namespace, file_namespace):
 
-            if args is None:
-                args = []
-            if kwargs is None:
-                kwargs = []
+        if args is None:
+            args = []
+        if kwargs is None:
+            kwargs = []
 
-            if not isinstance(args, list):
-                raise TypeError("args must be list")
-            if not isinstance(kwargs, list):
-                raise TypeError("kwargs must be list")
+        if not isinstance(args, list):
+            raise TypeError("args must be list")
+        if not isinstance(kwargs, list):
+            raise TypeError("kwargs must be list")
 
-            new_args = []
-            for arg in args:
-                new_args.append(_parse_node(arg, namespace))
+        new_args = []
+        for arg in args:
+            new_args.append(_parse_node(arg, namespace))
 
-            new_kwargs = {}
-            for kwarg in kwargs:
-                if not isinstance(kwarg, ast.keyword):
-                    raise TypeError("kwargs must be keyword")
-                new_kwargs[kwarg.arg] = _parse_node(kwarg.value, namespace)
+        new_kwargs = {}
+        for kwarg in kwargs:
+            if not isinstance(kwarg, ast.keyword):
+                raise TypeError("kwargs must be keyword")
+            new_kwargs[kwarg.arg] = _parse_node(kwarg.value, namespace)
 
-            data = {
-                "namespace": namespace,
-                "file_namespace": file_namespace
-            }
+        data = {
+            "namespace": namespace,
+            "file_namespace": file_namespace
+        }
 
-            optional_parameters = set(data.keys())
-            required_parameters = parameter_set & optional_parameters
+        optional_parameters = set(data.keys())
+        required_parameters = parameter_set & optional_parameters
 
-            required_kwargs = {k: data[k] for k in required_parameters}
+        required_kwargs = {k: data[k] for k in required_parameters}
 
-            try:
-                return func_for_compile(*new_args, **new_kwargs, **required_kwargs)
-            except TypeError as e:
-                cmp = re.compile(
-                    fr"{func_for_compile.__name__}\(\)\sgot\san\sunexpected\skeyword\sargument\s'namespace'")
-                if not cmp.match(str(e)):
-                    raise
+        try:
+            return func_for_compile(*new_args, **new_kwargs, **required_kwargs)
+        except TypeError as e:
+            cmp = re.compile(
+                fr"{func_for_compile.__name__}\(\)\sgot\san\sunexpected\skeyword\sargument\s'namespace'")
+            if not cmp.match(str(e)):
+                raise
 
-            return func_for_compile(*new_args, **new_kwargs)
+        return func_for_compile(*new_args, **new_kwargs)
 
-        package_name = inspect.getmodule(func_for_compile).__name__
-        full_path = f"{package_name}\\module.{func_for_compile.__name__}"
-
-        template_funcs[full_path] = wrapper
+    def decorator(func_for_python):
+        package_name = inspect.getmodule(func_for_python).__name__
+        full_path = f"{package_name}\\module.{func_for_python.__name__}"
+        template_funcs[full_path] = compile_func_wrapper
 
         return func_for_python
 

@@ -4,14 +4,21 @@
 
 import json
 
-from Constant import Flags, ScoreBoards, RawJsons
-from ScoreboardTools import SB_RESET, CHECK_SB, SBCheckType, SBCompareType, SB_ASSIGN
+from Constant import Flags
+from Constant import ScoreBoards
+from Constant import RawJsons
+from ScoreboardTools import SB_RESET
+from ScoreboardTools import CHECK_SB
+from ScoreboardTools import SBCheckType
+from ScoreboardTools import SBCompareType
+from ScoreboardTools import SB_ASSIGN
 from Template import NameNode
 from Template import register_func
 from BreakPointTools import register_processor
 from BreakPointTools import raiseBreakPoint
 from BreakPointTools import BreakPointFlag
-from DebuggingTools import FORCE_COMMENT, COMMENT
+from DebuggingTools import FORCE_COMMENT
+from DebuggingTools import COMMENT
 
 
 SB_TEMP = ScoreBoards.Temp
@@ -22,38 +29,6 @@ print_end: bool = True
 
 
 def _tprint(*objects, sep: str = ' ', end: str = '\n'):
-    global print_end
-
-    if not isinstance(sep, str):
-        raise TypeError("sep must be str")
-
-    if not isinstance(end, str):
-        raise TypeError("end must be str")
-
-    obj_str: list[str] = []
-    if not print_end:
-        obj_str.append('↳')
-
-    for obj in objects:
-        obj_str.append(str(obj))
-        safe_sep = sep.replace('\n', '')
-        obj_str.append(safe_sep)
-
-    if obj_str:
-        obj_str.pop()
-
-    if '\n' not in end:
-        obj_str.append('↴')
-        print_end = False
-    else:
-        safe_end = end.replace('\n', '')
-        obj_str.append(safe_end)
-
-    print(''.join(obj_str))
-
-
-@register_func(_tprint)
-def tprint(*objects, sep: str = ' ', end: str = '\n'):
     global print_end
 
     if not isinstance(sep, str):
@@ -90,6 +65,38 @@ def tprint(*objects, sep: str = ' ', end: str = '\n'):
     command = f"tellraw @a {json_text}\n"
 
     return command
+
+
+@register_func(_tprint)
+def tprint(*objects, sep: str = ' ', end: str = '\n'):
+    global print_end
+
+    if not isinstance(sep, str):
+        raise TypeError("sep must be str")
+
+    if not isinstance(end, str):
+        raise TypeError("end must be str")
+
+    obj_str: list[str] = []
+    if not print_end:
+        obj_str.append('↳')
+
+    for obj in objects:
+        obj_str.append(str(obj))
+        safe_sep = sep.replace('\n', '')
+        obj_str.append(safe_sep)
+
+    if obj_str:
+        obj_str.pop()
+
+    if '\n' not in end:
+        obj_str.append('↴')
+        print_end = False
+    else:
+        safe_end = end.replace('\n', '')
+        obj_str.append(safe_end)
+
+    print(''.join(obj_str))
 
 
 @register_processor("breakpoint")
@@ -140,7 +147,6 @@ def _sbp_breakpoint(func_path, level, *, name, objective):
             ]
         }
 
-        # command += f"tellraw @s {json.dumps(details_json)}\n"
         command += f"tellraw @a {json.dumps(continue_json)}\n"
         return command
 
@@ -151,15 +157,10 @@ def _sbp_breakpoint(func_path, level, *, name, objective):
         return _process_split()
 
 
-def _tbreakpoint(*args, **kwargs):
-    breakpoint(*args, **kwargs)
-
-
 _BP_ID: int = 0
 
 
-@register_func(_tbreakpoint)
-def tbreakpoint(*, file_namespace: str):
+def _tbreakpoint(*, file_namespace: str):
     global _BP_ID
 
     command = ''
@@ -180,6 +181,11 @@ def tbreakpoint(*, file_namespace: str):
     raiseBreakPoint(file_namespace, "breakpoint", name=breakpoint_id, objective=SB_TEMP)
 
     return command
+
+
+@register_func(_tbreakpoint)
+def tbreakpoint(*args, **kwargs):
+    breakpoint(*args, **kwargs)
 
 
 __all__ = (

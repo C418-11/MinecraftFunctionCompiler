@@ -33,6 +33,14 @@ def _CheckName(name) -> ColorString:
 
 def _add(_id: str, name: dict | str):
     _id = _CheckId(_id)
+    json_name = json.dumps(_CheckName(name).to_dict())
+
+    return f"bossbar add {_id} {json_name}\n"
+
+
+@register_func(_add)
+def add(_id: str, name: dict | str):
+    _id = _CheckId(_id)
     if _id in BossBar_Map:
         return CommandResult(success=False)
 
@@ -42,15 +50,14 @@ def _add(_id: str, name: dict | str):
     return CommandResult(success=True, result=len(BossBar_Map))
 
 
-@register_func(_add)
-def add(_id: str, name: dict | str):
-    _id = _CheckId(_id)
-    json_name = json.dumps(_CheckName(name).to_dict())
-
-    return f"bossbar add {_id} {json_name}\n"
-
-
 def _get(_id: str):
+    _id = _CheckId(_id)
+
+    return f"bossbar get {_id}\n"
+
+
+@register_func(_get)
+def get(_id: str):
     _id = _CheckId(_id)
     try:
         return CommandResult(success=True, result=len(BossBar_Map[_id]["players"]))
@@ -58,14 +65,14 @@ def _get(_id: str):
         return CommandResult(success=False)
 
 
-@register_func(_get)
-def get(_id: str):
+def _remove(_id: str):
     _id = _CheckId(_id)
 
-    return f"bossbar get {_id}\n"
+    return f"bossbar remove {_id}\n"
 
 
-def _remove(_id: str):
+@register_func(_remove)
+def remove(_id: str):
     _id = _CheckId(_id)
     try:
         BossBar_Map.pop(_id)
@@ -74,14 +81,14 @@ def _remove(_id: str):
     return CommandResult(success=True, result=len(BossBar_Map))
 
 
-@register_func(_remove)
-def remove(_id: str):
+def _set_players(_id: str, players: str):
     _id = _CheckId(_id)
 
-    return f"bossbar remove {_id}\n"
+    return f"bossbar set {_id} players {players}\n"
 
 
-def _set_players(_id: str, players: str):
+@register_func(_set_players)
+def set_players(_id: str, players: str):
     _id = _CheckId(_id)
 
     try:
@@ -95,27 +102,20 @@ def _set_players(_id: str, players: str):
     return CommandResult(success=True, result=len(players))
 
 
-@register_func(_set_players)
-def set_players(_id: str, players: str):
-    _id = _CheckId(_id)
-
-    return f"bossbar set {_id} players {players}\n"
-
-
 def _get_players(_id: str):
     _id = _CheckId(_id)
 
-    try:
-        return CommandResult(success=True, result=len(BossBar_Map[_id]["players"]))
-    except KeyError:
-        return CommandResult(success=False)
+    return f"bossbar get {_id} players\n"
 
 
 @register_func(_get_players)
 def get_players(_id: str):
     _id = _CheckId(_id)
 
-    return f"bossbar get {_id} players\n"
+    try:
+        return CommandResult(success=True, result=len(BossBar_Map[_id]["players"]))
+    except KeyError:
+        return CommandResult(success=False)
 
 
 def _CheckValue(value: int | float):
@@ -131,22 +131,7 @@ def _CheckValue(value: int | float):
     return value
 
 
-def _set_value(_id: str, value: int | float):
-    _id = _CheckId(_id)
-    value = _CheckValue(value)
-
-    try:
-        if BossBar_Map[_id]["value"] == value:
-            return CommandResult(success=False)
-    except KeyError:
-        return CommandResult(success=False)
-
-    BossBar_Map[_id]["value"] = value
-    return CommandResult(success=True, result=value)
-
-
-@register_func(_set_value)
-def set_value(_id: str, value: int | float | NameNode):
+def _set_value(_id: str, value: int | float | NameNode):
     _id = _CheckId(_id)
 
     if isinstance(value, NameNode):
@@ -161,7 +146,29 @@ def set_value(_id: str, value: int | float | NameNode):
     return f"bossbar set {_id} value {value}\n"
 
 
+@register_func(_set_value)
+def set_value(_id: str, value: int | float):
+    _id = _CheckId(_id)
+    value = _CheckValue(value)
+
+    try:
+        if BossBar_Map[_id]["value"] == value:
+            return CommandResult(success=False)
+    except KeyError:
+        return CommandResult(success=False)
+
+    BossBar_Map[_id]["value"] = value
+    return CommandResult(success=True, result=value)
+
+
 def _get_value(_id: str):
+    _id = _CheckId(_id)
+
+    return f"bossbar get {_id} value\n"
+
+
+@register_func(_get_value)
+def get_value(_id: str):
     _id = _CheckId(_id)
 
     try:
@@ -170,27 +177,7 @@ def _get_value(_id: str):
         return CommandResult(success=False)
 
 
-@register_func(_get_value)
-def get_value(_id: str):
-    _id = _CheckId(_id)
-
-    return f"bossbar get {_id} value\n"
-
-
-def _set_max(_id: str, _max: int | float):
-    _id = _CheckId(_id)
-    _max = _CheckValue(_max)
-
-    try:
-        if BossBar_Map[_id]["max"] == _max:
-            return CommandResult(success=False)
-    except KeyError:
-        return CommandResult(success=False)
-    BossBar_Map[_id]["max"] = _max
-
-
-@register_func(_set_max)
-def set_max(_id: str, _max: int | float | NameNode):
+def _set_max(_id: str, _max: int | float | NameNode):
     _id = _CheckId(_id)
 
     if isinstance(_max, NameNode):
@@ -205,7 +192,27 @@ def set_max(_id: str, _max: int | float | NameNode):
     return f"bossbar set {_id} max {_max}\n"
 
 
+@register_func(_set_max)
+def set_max(_id: str, _max: int | float):
+    _id = _CheckId(_id)
+    _max = _CheckValue(_max)
+
+    try:
+        if BossBar_Map[_id]["max"] == _max:
+            return CommandResult(success=False)
+    except KeyError:
+        return CommandResult(success=False)
+    BossBar_Map[_id]["max"] = _max
+
+
 def _get_max(_id: str):
+    _id = _CheckId(_id)
+
+    return f"bossbar get {_id} max\n"
+
+
+@register_func(_get_max)
+def get_max(_id: str):
     _id = _CheckId(_id)
 
     try:
@@ -214,14 +221,14 @@ def _get_max(_id: str):
         return CommandResult(success=False)
 
 
-@register_func(_get_max)
-def get_max(_id: str):
+def _set_visible(_id: str, visible: bool):
     _id = _CheckId(_id)
 
-    return f"bossbar get {_id} max\n"
+    return f"bossbar set {_id} visible {visible}\n"
 
 
-def _set_visible(_id: str, visible: bool):
+@register_func(_set_visible)
+def set_visible(_id: str, visible: bool):
     _id = _CheckId(_id)
     try:
         BossBar_Map[_id]["visible"] = visible
@@ -230,14 +237,14 @@ def _set_visible(_id: str, visible: bool):
     return CommandResult(success=True, result=visible)
 
 
-@register_func(_set_visible)
-def set_visible(_id: str, visible: bool):
+def _get_visible(_id: str):
     _id = _CheckId(_id)
 
-    return f"bossbar set {_id} visible {visible}\n"
+    return f"bossbar get {_id} visible\n"
 
 
-def _get_visible(_id: str):
+@register_func(_get_visible)
+def get_visible(_id: str):
     _id = _CheckId(_id)
 
     try:
@@ -246,14 +253,14 @@ def _get_visible(_id: str):
         return CommandResult(success=False)
 
 
-@register_func(_get_visible)
-def get_visible(_id: str):
+def _set_name(_id: str, name: dict | str):
     _id = _CheckId(_id)
 
-    return f"bossbar get {_id} visible\n"
+    return f"bossbar set {_id} name {json.dumps(_CheckName(name).to_dict())}\n"
 
 
-def _set_name(_id: str, name: dict | str):
+@register_func(_set_name)
+def set_name(_id: str, name: dict | str):
     _id = _CheckId(_id)
     name = _CheckName(name)
     try:
@@ -262,13 +269,6 @@ def _set_name(_id: str, name: dict | str):
         return CommandResult(success=False)
     print(name.to_ansi() + "\033[0m")
     return CommandResult(success=True, result=0)
-
-
-@register_func(_set_name)
-def set_name(_id: str, name: dict | str):
-    _id = _CheckId(_id)
-
-    return f"bossbar set {_id} name {json.dumps(_CheckName(name).to_dict())}\n"
 
 
 allow_color = "blue|green|pink|purple|red|white|yellow".split("|")
@@ -284,18 +284,18 @@ def _CheckColor(color: str):
 def _set_color(_id: str, color: str):
     _id = _CheckId(_id)
     color = _CheckColor(color)
-    try:
-        BossBar_Map[_id]["color"] = color
-    except KeyError:
-        return CommandResult(success=False)
-    return CommandResult(success=True, result=0)
+    return f"bossbar set {_id} color {color}\n"
 
 
 @register_func(_set_color)
 def set_color(_id: str, color: str):
     _id = _CheckId(_id)
     color = _CheckColor(color)
-    return f"bossbar set {_id} color {color}\n"
+    try:
+        BossBar_Map[_id]["color"] = color
+    except KeyError:
+        return CommandResult(success=False)
+    return CommandResult(success=True, result=0)
 
 
 allow_style = "notched_6|notched_10|notched_12|notched_20|progress".split("|")
@@ -315,11 +315,7 @@ def _set_style(_id: str, style: str | int):
     _id = _CheckId(_id)
     style = _CheckStyle(style)
 
-    try:
-        BossBar_Map[_id]["style"] = style
-    except KeyError:
-        return CommandResult(success=False)
-    return CommandResult(success=True, result=0)
+    return f"bossbar set {_id} style {style}\n"
 
 
 @register_func(_set_style)
@@ -327,7 +323,11 @@ def set_style(_id: str, style: str | int):
     _id = _CheckId(_id)
     style = _CheckStyle(style)
 
-    return f"bossbar set {_id} style {style}\n"
+    try:
+        BossBar_Map[_id]["style"] = style
+    except KeyError:
+        return CommandResult(success=False)
+    return CommandResult(success=True, result=0)
 
 
 __all__ = (
