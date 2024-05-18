@@ -31,7 +31,12 @@ def root_namespace(namespace: str) -> str:
 ns_map: OrderedDict[str, OrderedDict[str, ...]] = OrderedDict()
 
 
-def ns_init(namespace: str, ns_type: str):
+def ns_init(namespace: str, ns_type: str) -> None:
+    """
+    初始化根命名空间
+    :param namespace: 命名空间
+    :param ns_type: 命名空间类型
+    """
     ns_map[namespace] = OrderedDict({
         ".__namespace__": namespace,
         ".__type__": ns_type
@@ -39,6 +44,13 @@ def ns_init(namespace: str, ns_type: str):
 
 
 def ns_setter(name: str, targe_namespace: str, namespace: str, ns_type: str = None) -> None:
+    """
+    在指定的命名空间下创建一个名称指向目标命名空间
+    :param name: 名称
+    :param targe_namespace: 指向的命名空间
+    :param namespace: 设置的命名空间
+    :param ns_type: 命名空间类型
+    """
     data = {
         name: {
             ".__namespace__": targe_namespace,
@@ -58,11 +70,11 @@ def ns_setter(name: str, targe_namespace: str, namespace: str, ns_type: str = No
 
 def ns_getter(name, namespace: str, ret_raw: bool = False) -> tuple[str | dict, str]:
     """
-
-    :param name: 需要寻找的名称
-    :param namespace: 在那个命名空间下进行寻找
+    在指定的命名空间下寻找名称，并返回所找到的值
+    :param name: 寻找的名称
+    :param namespace: 寻找的命名空间
     :param ret_raw: 是否直接返回源字典
-    :return: 当ret_raw为True时直接返回源字典，否则返回所找到的完整命名空间
+    :returns: (完整命名空间 | 命名空间字典, 基础命名空间)
     """
 
     last_map: dict[str, dict[str, ...]] = ns_map
@@ -103,11 +115,12 @@ def node_to_namespace(
         ns_type: str | None = None
 ) -> tuple[str, str, str]:
     """
+    将AST节点转换为命名空间
     :param node: AST节点
     :param namespace: 当前命名空间
     :param not_exists_ok: 名称不存在时在当前命名空间下生成
     :param ns_type: 自动生成时填入的命名空间类型
-    :return: (name, full_namespace, root_namespace)
+    :returns: (name, full_namespace, root_namespace)
     """
 
     if isinstance(node, ast.Name):
@@ -150,6 +163,11 @@ temp_map: OrderedDict[str, list[str]] = OrderedDict()
 
 
 def store_local(namespace: str) -> tuple[str, str]:
+    """
+    将当前命名空间下的所有变量和临时变量存储到data storage
+    :param namespace: 目标命名空间
+    :returns: (保存用命令, 加载用命令)
+    """
     _ns, _name = namespace.rsplit('\\', 1)
     local_ns: dict[str, dict[str, ...]] = ns_getter(_name, _ns, ret_raw=True)[0]
 
@@ -164,6 +182,10 @@ def store_local(namespace: str) -> tuple[str, str]:
         ns_ls.append(data[".__namespace__"])
 
     def store() -> str:
+        """
+        计算需保存的变量
+        :return: 保存用命令
+        """
         nonlocal ns_ls
         command = ''
         command += COMMENT("LocalVars.Store")
@@ -198,6 +220,10 @@ def store_local(namespace: str) -> tuple[str, str]:
         return command
 
     def load() -> str:
+        """
+        计算需加载的变量
+        :return: 加载用命令
+        """
         nonlocal ns_ls
         command = ''
         command += COMMENT("LocalVars.Load")
@@ -234,8 +260,15 @@ file_ns_map: OrderedDict[str, OrderedDict[str, ...]] = OrderedDict()
 
 
 def file_ns_init(file_namespace: str, level: str | None, file_ns_type: str, ns: str) -> None:
+    """
+    初始化根文件命名空间
+    :param file_namespace: 文件命名空间
+    :param level: 文件层级名
+    :param file_ns_type: 文件命名空间类型
+    :param ns: 文件命名空间所对应的普通命名空间
+    """
     file_ns_map[file_namespace] = OrderedDict({
-        ".__path__": file_namespace,
+        ".__file_namespace__": file_namespace,
         ".__level__": level,
         ".__type__": file_ns_type,
         ".__namespace__": ns,
@@ -243,12 +276,21 @@ def file_ns_init(file_namespace: str, level: str | None, file_ns_type: str, ns: 
 
 
 def file_ns_setter(
-        name: str, targe_path: str, file_namespace: str,
+        name: str, targe_file_namespace: str, file_namespace: str,
         level: str | None, file_ns_type: str, ns: str
 ) -> None:
+    """
+    在指定的文件命名空间下创建一个名称指向目标文件命名空间
+    :param name: 名称
+    :param targe_file_namespace: 指向的文件命名空间
+    :param file_namespace: 设置的文件命名空间
+    :param level: 文件层级名
+    :param file_ns_type: 文件命名空间类型
+    :param ns: 文件命名空间所对应的普通命名空间
+    """
     data = {
         name: {
-            ".__path__": targe_path,
+            ".__target_namespace__": targe_file_namespace,
             ".__level__": level,
             ".__type__": file_ns_type,
             ".__namespace__": ns,
@@ -265,7 +307,14 @@ def file_ns_setter(
     last_map.update(data)
 
 
-def file_ns_getter(name: str, namespace: str, ret_raw: bool = False):
+def file_ns_getter(name: str, namespace: str, ret_raw: bool = False) -> tuple[str | dict, str]:
+    """
+    在指定的文件命名空间下寻找名称，并返回所找到的值
+    :param name: 寻找的名称
+    :param namespace: 寻找的文件命名空间
+    :param ret_raw: 是否返回源字典
+    :returns: (完整文件命名空间 | 文件命名空间字典, 基础文件命名空间)
+    """
     last_map: dict[str, dict[str, ...]] = file_ns_map
     last_result: dict | None = None
 
@@ -291,7 +340,7 @@ def file_ns_getter(name: str, namespace: str, ret_raw: bool = False):
         raise KeyError(f"{name} not found in namespace {namespace}")
 
     if not ret_raw:
-        last_result = last_result[".__path__"]
+        last_result = last_result[".__target_namespace__"]
 
     return last_result, '\\'.join(last_ns)
 

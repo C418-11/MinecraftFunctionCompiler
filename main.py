@@ -182,8 +182,15 @@ def mkdirs(path: str, *, exist_ok: bool = False):
 
 
 @register_processor("return")
-def sbp_return(func_path, level, *, name, objective):
-    def _process_raise():
+def sbp_return(func_path: str, level: str, *, name: str, objective: str):
+    """
+    处理return语句的断点
+    :param func_path: 断点切断后恢复执行需要调用的函数
+    :param level: 文件命名空间层级名
+    :param name: 标记位目标
+    :param objective: 标记位计分项
+    """
+    def _process_raise() -> tuple[str, bool]:
         command = ''
         keep_raise: bool = True
         if level in ["module", "function"]:
@@ -198,7 +205,7 @@ def sbp_return(func_path, level, *, name, objective):
             ))
         return command, keep_raise
 
-    def _process_split():
+    def _process_split() -> str:
         command = ''
         command += COMMENT("BP:Return.Split")
         command += CHECK_SB(
@@ -218,11 +225,24 @@ def sbp_return(func_path, level, *, name, objective):
         return _process_split()
 
 
-def file_ns_path(path: str, *args):
+def file_ns_path(path: str, *args) -> str:
+    """
+    将文件命名空间转换为路径
+    :param path: 文件命名空间
+    :param args: 需要拼接的路径
+    :return: 拼接后的路径
+    """
     return os.path.normpath(os.path.join(SAVE_PATH, path, *args))
 
 
 def generate_code(node, namespace: str, file_ns: str) -> str:
+    """
+    递归生成命令
+    :param node: 需要被处理的AST节点
+    :param namespace: 当前的命名空间
+    :param file_ns: 当前的文件命名空间
+    :return: 生成的命令字符串
+    """
     if node is None:
         return SB_ASSIGN(
             f"{namespace}{ResultExt}", SB_TEMP,
@@ -899,6 +919,11 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
 
 
 def _deep_sorted(d: dict | OrderedDict) -> OrderedDict | Any:
+    """
+    深度排序
+    :param d: 需要排序的值
+    :return: 排序后的值
+    """
     if type(d) is set:
         d = list(d)
     if type(d) in (list, tuple):

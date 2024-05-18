@@ -117,13 +117,8 @@ def _sbp_breakpoint(func_path, level, *, name, objective):
     def _process_split():
         command = ''
         command += COMMENT("BP:breakpoint.Split")
-        command += CHECK_SB(
-            SBCheckType.UNLESS,
-            name, objective,
-            SBCompareType.EQUAL,
-            Flags.TRUE, SB_FLAGS,
-            f"function {func_path}"
-        )
+        command += CHECK_SB(SBCheckType.UNLESS, name, objective, SBCompareType.EQUAL, Flags.TRUE, SB_FLAGS,
+                            f"function {func_path}")
         continue_json = {
             "text": '',
             "extra": [

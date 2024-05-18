@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 # cython: language_level = 3
+"""
+这个文件存储了一些通用的常量
+"""
 
 __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
@@ -12,7 +15,7 @@ ResultExt = ".?Result"
 
 class ScoreBoards:
     """
-    计分板名称
+    这个类存储了必要计分项的名称
     """
     Args = "Py.Args"
     Temp = "Py.Temp"
@@ -27,7 +30,7 @@ DataStorageRoot = "python"
 
 class DataStorages:
     """
-    data storage相关
+    这个类存储了必要 data storage 的名称
     """
     Temp = "temporary"
     LocalVars = "LocalVars"
@@ -36,7 +39,7 @@ class DataStorages:
 
 class RawJsons:
     """
-    原始json文本
+    这个类存储了一些常用的原始JSON文本
     """
     Prefix = {
         "text": "[Python]",
@@ -60,6 +63,9 @@ class RawJsons:
     }
 
     class HoverEvents:
+        """
+        这个类存储了一些常用的hoverEvent原始JSON
+        """
         Author = {
             "hoverEvent": {"action": "show_text", "value": "Made By: C418____11"}
         }
@@ -67,7 +73,7 @@ class RawJsons:
 
 class Flags:
     """
-    FLAGS计分板的计分项名
+    这个类存储了一些常用的标记位名称
     """
     TRUE = "True"
     FALSE = "False"

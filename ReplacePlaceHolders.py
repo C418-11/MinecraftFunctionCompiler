@@ -10,7 +10,13 @@ import re
 from Constant import PLACEHOLDER_MAP
 
 
-def replace_placeholders(code, data):
+def replace_placeholders(code: str, data: dict) -> str:
+    """
+    替换代码中的占位符
+    :param code: 源码
+    :param data: 数据
+    :return: 替换后的代码
+    """
     matches = re.findall(r'\$\{([^{}$]+)}', code)
 
     for match in matches:
@@ -23,7 +29,13 @@ def replace_placeholders(code, data):
     return code
 
 
-def get_relative_path(a, b):
+def get_relative_path(a: str, b: str) -> str:
+    """
+    计算路径A相对于路径B的相对路径
+    :param a: 路径A
+    :param b: 路径B
+    :return: 相对路径
+    """
     # 获取路径A和B的绝对路径
     a = os.path.abspath(a)
     b = os.path.abspath(b)
@@ -50,7 +62,13 @@ def get_relative_path(a, b):
         return relative_b
 
 
-def get_files(base_path: str, root_dir: str):
+def get_files(base_path: str, root_dir: str) -> str:
+    """
+    获取指定目录下的所有文件路径的生成器
+    :param base_path: 基础路径
+    :param root_dir: 根目录
+    :return: 文件路径
+    """
     for root, dirs, files in os.walk(os.path.join(base_path, root_dir)):
         for file in files:
             relative_path = get_relative_path(os.path.join(base_path, root_dir), root)

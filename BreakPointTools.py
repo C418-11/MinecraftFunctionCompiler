@@ -80,7 +80,7 @@ def updateBreakPoint(file_namespace: str):
         if not file_name.endswith("$link"):
             continue
 
-        raw_f_namespace = target_f_ns[file_name][".__path__"]
+        raw_f_namespace = target_f_ns[file_name][".__file_namespace__"]
         rf_ns, rf_name = raw_f_namespace.rsplit('\\', maxsplit=1)
         raw_f_ns = file_ns_getter(rf_name, rf_ns, ret_raw=True)[0]
 

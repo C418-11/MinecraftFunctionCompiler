@@ -11,11 +11,19 @@ from Constant import RawJsons
 from Constant import ScoreBoards
 
 
-def IF_FLAG(flag: str, cmd: str) -> str:
+def IF_FLAG(flag: str, cmd: str, *, line_break: bool = False) -> str:
     """
-    行尾 **没有** 换行符
+    如果标记位等于True标记位, 则执行 cmd
+    :param flag: 标志名
+    :param cmd: 条件成立时执行的命令
+    :param line_break: 是否换行
+    :return: 生成的命令
     """
-    return f"execute if score {flag} {ScoreBoards.Flags} = {Flags.TRUE} {ScoreBoards.Flags} run {cmd}"
+    command = f"execute if score {flag} {ScoreBoards.Flags} = {Flags.TRUE} {ScoreBoards.Flags} run {cmd}"
+    if line_break:
+        command += "\n"
+
+    return command
 
 
 ENABLE_DEBUGGING: bool = False
@@ -27,7 +35,13 @@ def DEBUG_OBJECTIVE(
         from_objective: str = None, from_name: str = None
 ) -> str:
     """
-    行尾 **有** 换行符
+    生成运行时显示调试值的命令
+    :param raw_json: 源JSON文本
+    :param objective: 目标计分项
+    :param name: 计分目标
+    :param from_objective: 源积分项
+    :param from_name: 源计分目标
+    :return: 生成的命令
     """
     if not ENABLE_DEBUGGING:
         return ''
@@ -73,7 +87,7 @@ def DEBUG_OBJECTIVE(
 
 def DEBUG_TEXT(*raw_json: dict) -> str:
     """
-    行尾 **有** 换行符
+    生成运行时显示调试源JSON文本的命令
     """
     if not ENABLE_DEBUGGING:
         return ''
@@ -110,6 +124,12 @@ GENERATE_COMMENTS: bool = True
 
 
 def FORCE_COMMENT(*texts: str, **kv_texts) -> str:
+    """
+    强制生成注释文本 (可以安全的包含'\n')
+    :param texts: 调试文本
+    :param kv_texts: 调试键值对
+    :return: 生成的注释
+    """
     nor_text = ' '.join(texts)
     kv_text = '\n'.join(f"{k} = {v}" for k, v in kv_texts.items())
 
@@ -128,6 +148,12 @@ def FORCE_COMMENT(*texts: str, **kv_texts) -> str:
 
 
 def COMMENT(*texts: str, **kv_texts) -> str:
+    """
+    生成注释文本 (可以安全的包含'\n')
+    :param texts: 调试文本
+    :param kv_texts: 调试键值对
+    :return: 生成的注释
+    """
     if not GENERATE_COMMENTS:
         return ''
 

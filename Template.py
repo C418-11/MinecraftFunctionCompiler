@@ -10,6 +10,7 @@ import importlib
 import inspect
 import sys
 import traceback
+from typing import Callable, TypeVar
 
 from Constant import ResultExt
 from Constant import ScoreBoards
@@ -42,6 +43,12 @@ class NameNode:
 
 
 def _parse_node(node, namespace: str):
+    """
+    尝试把AST节点转换成包含NameNode的python类型
+    :param node:
+    :param namespace:
+    :return:
+    """
     if isinstance(node, ast.Constant):
         return node.value
     if isinstance(node, ast.Name):
@@ -54,12 +61,33 @@ def _parse_node(node, namespace: str):
     return node
 
 
-def register_func(func_for_compile):
+Callable_T = TypeVar("Callable_T", bound=Callable)
+
+
+def register_func(func_for_compile: Callable[..., str]) -> Callable[[Callable_T], Callable_T]:
+    """
+    用于注册模版函数的装饰器
+    :param func_for_compile: 编译用函数
+    :return: 装饰器
+    """
     parameter_set = set(inspect.signature(func_for_compile).parameters.keys())
 
     @functools.wraps(func_for_compile)
-    def compile_func_wrapper(args, kwargs, *, namespace, file_namespace):
-
+    def compile_func_wrapper(
+            args: list | None,
+            kwargs: dict | None,
+            *,
+            namespace: str,
+            file_namespace: str
+    ) -> str:
+        """
+        包装编译用函数, 对参数和返回值进行处理
+        :param args: 函数参数列表
+        :param kwargs: 函数关键字参数
+        :param namespace: 调用者命名空间
+        :param file_namespace: 调用者文件命名空间
+        :return: 编译出的命令字符串 (末尾自带'\n')
+        """
         if args is None:
             args = []
         if kwargs is None:
@@ -102,7 +130,12 @@ def register_func(func_for_compile):
 
         return command
 
-    def decorator(func_for_python):
+    def decorator(func_for_python: Callable_T) -> Callable_T:
+        """
+        以函数名称注册编译用函数, 不对函数进行任何处理
+        :param func_for_python: python环境下的函数
+        :return: 原样返回函数
+        """
         package_name = inspect.getmodule(func_for_python).__name__
         full_path = f"{package_name}\\module.{func_for_python.__name__}"
         template_funcs[full_path] = compile_func_wrapper
@@ -113,6 +146,11 @@ def register_func(func_for_compile):
 
 
 def check_template(file_path: str) -> bool:
+    """
+    检查文件是否为模板文件
+    :param file_path: 要检查的文件路径
+    :return: 是否为模版文件
+    """
     import re
     c = re.compile(r"#\s*MCFC:\s*(.*)")
 
@@ -129,6 +167,10 @@ def check_template(file_path: str) -> bool:
 
 
 def init_template(name: str) -> None:
+    """
+    初始化模板文件
+    :param name: 访问模板文件的路径
+    """
     module = importlib.import_module(name)
     try:
         module.init()
@@ -140,6 +182,9 @@ def init_template(name: str) -> None:
 
 
 class CommandResult:
+    """
+    临时的东西, 后面大概率弃用
+    """
     def __init__(self, *other, success: bool, result: int = None):
         self.success = success
         if not success:
