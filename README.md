@@ -4,7 +4,10 @@
 
 欢迎大佬参与开发
 
-(u1s1我自己写这玩意还是怪累的（实际上是懒死了）要是有大佬PR把那些模板函数补一补就舒服了（幻想时间）)
+
+
+[`API文档`(点击跳转)](https://minecraftfunctioncompiler.readthedocs.io/zh/latest/index.html)
+
 
 # 目录
 
@@ -255,20 +258,15 @@ func_for_compile 函数会有一些特殊参数
 
 ## 3.3 自定义断点
 
-[//]: # (导入`raiseBreakPoint`函数)
+导入`raiseBreakPoint`函数
 
-[//]: # (``` python)
+``` python
+from BreakPointTools import raiseBreakPoint
+```
 
-[//]: # (from BreakPointTools import raiseBreakPoint)
 
-[//]: # (```)
+在需要断点的位置调用`raiseBreakPoint`函数
 
-[//]: # ()
-
-[//]: # (在需要断点的位置调用`raiseBreakPoint`函数)
-
-[//]: # (``` python)
-
-[//]: # (raiseBreakPoint&#40;file_namespace, func, *func_args, **func_kwargs&#41;)
-
-[//]: # (```)
+``` python
+raiseBreakPoint(file_namespace, func, *func_args, **func_kwargs)
+```
