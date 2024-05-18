@@ -36,7 +36,7 @@ html_favicon = "./_static/favicon.png"
 extensions.append('autoapi.extension')
 
 autoapi_dirs = ["../"]
-autoapi_ignore = ["*/tests/*", "*/build/*", "*/.venv*", "*/.git/*", "*/docs/*", "*/.output/*"]
+autoapi_ignore = ["*/tests/*", "*/build/*", "*/.venv*", "*/.git/*", "*/docs/conf.py", "*/.output/*"]
 autoapi_options = [
     "members",
     "inherited-members",
