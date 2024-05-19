@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 # cython: language_level = 3
-
-__author__ = "C418____11 <553515788@qq.com>"
-__version__ = "0.0.1Dev"
-
 """
 抛出, 更新, 处理断点
 """
+
+__author__ = "C418____11 <553515788@qq.com>"
+__version__ = "0.0.1Dev"
 
 import json
 import os
@@ -29,12 +28,14 @@ def BreakPointFlag(func: str | None, *args, **kwargs) -> str:
     用于生成断点标记
 
     :param func: 断点处理函数注册名
+    :type func: str | None
 
     :param args: 断点处理函数参数
 
     :param kwargs: 断点处理函数关键字参数
 
     :return: 生成的断点标记
+    :rtype: str
     """
     flag_str = "&Flag: BreakPoint"
     flag_str += f"&func={func}" if func else ""
@@ -51,8 +52,10 @@ def register_processor(name: str | None) -> Callable[[Processor_T], Processor_T]
     注册断点处理函数
 
     :param name: 注册名
+    :type name: str | None
 
     :return: 用于注册的装饰器
+    :rtype: Callable[[Processor_T], Processor_T]
     """
 
     def decorator(func: Processor_T) -> Processor_T:
@@ -60,8 +63,10 @@ def register_processor(name: str | None) -> Callable[[Processor_T], Processor_T]
         注册断点处理函数
 
         :param func: 断点处理函数
+        :type func: Processor_T
 
         :return: 原样返回所装饰的函数
+        :rtype: Processor_T
         """
         if name in BreakPointProcessor:
             warnings.warn(
@@ -83,12 +88,19 @@ def raiseBreakPoint(file_namespace: str, func: str | None, *func_args, **func_kw
     抛出断点
 
     :param file_namespace: 抛出所在的文件命名空间
+    :type file_namespace: str
 
     :param func: 断点处理函数注册名
+    :type func: str | None
 
     :param func_args: 断点处理函数参数
+    :type func_args: tuple
 
     :param func_kwargs: 断点处理函数关键字参数
+    :type func_kwargs: dict
+
+    :return: None
+    :rtype: None
     """
     global _BP_ID
     f_ns, f_name = file_namespace.rsplit('\\', maxsplit=1)
@@ -112,8 +124,10 @@ def updateBreakPoint(file_namespace: str) -> str:
     更新断点
 
     :param file_namespace: 需要更新的文件命名空间
+    :type file_namespace: str
 
     :return: 断点处理函数生成的命令
+    :rtype: str
     """
     f_ns, f_name = file_namespace.rsplit('\\', maxsplit=1)
     target_f_ns: dict[str, dict[str, ...] | str] = file_ns_getter(f_name, f_ns, ret_raw=True)[0]
@@ -169,10 +183,16 @@ class SplitBreakPoint:
         初始化
 
         :param file_path: 写入的文件路径
+        :type file_path: str
 
         :param file_namespace: 当前的文件命名空间
+        :type file_namespace: str
 
         :param encoding: 文件编码
+        :type encoding: str
+
+        :return: None
+        :rtype: None
         """
         self._namespace = file_namespace
         self._encoding = encoding
@@ -198,6 +218,10 @@ class SplitBreakPoint:
         解析注释 在断点标记处分割MCF
 
         :param text: 需要解析的注释文本
+        :type text: str
+
+        :return: None
+        :rtype: None
         """
         matches = self._flag_pattern.findall(text)
         if not matches or matches[0] != "BreakPoint":
@@ -243,6 +267,10 @@ class SplitBreakPoint:
         写入文本
 
         :param text: 文本
+        :type text: str
+
+        :return: None
+        :rtype: None
         """
         if self.closed:
             raise Exception("File is closed")
@@ -271,6 +299,10 @@ class SplitBreakPoint:
         写入文本到当前打开的文件
 
         :param text: 文本
+        :type text: str
+
+        :return: None
+        :rtype: None
         """
         self._open_file.write(text)
 
@@ -279,8 +311,10 @@ class SplitBreakPoint:
         判断是否是注释行
 
         :param txt: 文本
+        :type txt: str
 
         :return: 是否是注释行
+        :rtype: bool
         """
         if '#' not in txt:
             return False
@@ -297,8 +331,10 @@ class SplitBreakPoint:
         处理注释行
 
         :param txt: 待处理文本
+        :type txt: str
 
         :return: 是否处理了注释
+        :rtype: bool
         """
         if self._is_comment:
             self._comment_line_cache += txt
@@ -313,6 +349,10 @@ class SplitBreakPoint:
     def close(self) -> None:
         """
         关闭文件
+
+        :return: None
+
+        :rtype: None
         """
         if not self.closed:
             self._open_file.close()
