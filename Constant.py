@@ -4,9 +4,6 @@
 这个文件存储了一些通用的常量
 """
 
-__author__ = "C418____11 <553515788@qq.com>"
-__version__ = "0.0.1Dev"
-
 import json
 
 DECIMAL_PRECISION: int = 3

@@ -3,10 +3,6 @@
 """
 计分板相关工具函数
 """
-__author__ = "C418____11 <553515788@qq.com>"
-__version__ = "0.0.1Dev"
-
-
 
 from Constant import ScoreBoards
 
@@ -20,7 +16,6 @@ def init_objective(objective: str) -> None:
 
     :param objective: 计分项id
     :type objective: str
-
     :return: None
     :rtype: None
     """
@@ -35,10 +30,8 @@ def init_name(name: str, objective: str) -> None:
 
     :param name: 目标
     :type name: str
-
     :param objective: 计分项
     :type objective: str
-
     :return: None
     :rtype: None
     """
@@ -53,10 +46,8 @@ def _init_flags(name: str, objective: str) -> None:
 
     :param name: 目标
     :type name: str
-
     :param objective: 计分项
     :type objective: str
-
     :return: None
     :rtype: None
     """
@@ -75,10 +66,8 @@ def gen_code(name: str, objective: str) -> str:
 
     :param name: 目标
     :type name: str
-
     :param objective: 计分项
     :type objective: str
-
     :return: 编码后的计分目标
     :rtype: str
     """
@@ -140,28 +129,20 @@ def CHECK_SB(
 
     :param check_type: 检查类型 (SBCheckType)
     :type check_type: str
-
     :param a_name: 目标A
     :type a_name: str
-
     :param a_objective: 计分项A
     :type a_objective: str
-
     :param compare_op: 比较类型 (SBCompareType)
     :type compare_op: str
-
     :param b_name: 目标B
     :type b_name: str
-
     :param b_objective: 计分项B
     :type b_objective: str
-
     :param cmd: 要执行的命令
     :type cmd: str
-
     :param line_break: 是否进行换行
     :type line_break: bool
-
     :return: 生成的命令
     :rtype: str
     """
@@ -192,19 +173,14 @@ def SB_ASSIGN(to_name: str, to_objective: str, from_name: str, from_objective: s
 
     :param to_name: 目标计分目标
     :type to_name: str
-
     :param to_objective: 目标计分项
     :type to_objective: str
-
     :param from_name: 源计分目标
     :type from_name: str
-
     :param from_objective: 源计分项
     :type from_objective: str
-
     :param line_break: 是否进行换行
     :type line_break: bool
-
     :return: 生成的命令
     :rtype: str
     """
@@ -251,22 +227,16 @@ def SB_OP(
 
     :param operation: 操作类型 (SBOperationType)
     :type operation: str
-
     :param target_name: 目标
     :type target_name: str
-
     :param target_objective: 目标记分项
     :type target_objective: str
-
     :param selector: 选择器
     :type selector: str
-
     :param objective: 记分项
     :type objective: str
-
     :param line_break: 是否进行换行
     :type line_break: bool
-
     :return: 生成的命令
     :rtype: str
     """
@@ -293,13 +263,10 @@ def SB_RESET(name: str, objective: str, *, line_break: bool = True) -> str:
 
     :param name: 目标
     :type name: str
-
     :param objective: 计分项
     :type objective: str
-
     :param line_break: 是否进行换行
     :type line_break: bool
-
     :return: 生成的命令
     :rtype: str
     """
@@ -317,16 +284,12 @@ def SB_CONSTANT(name: str, objective: str, value: int, *, line_break: bool = Tru
 
     :param name: 目标
     :type name: str
-
     :param objective: 计分项
     :type objective: str
-
     :param value: 常量值
     :type value: int
-
     :param line_break: 是否换行
     :type line_break: bool
-
     :return: 生成的命令
     :rtype: str
     """

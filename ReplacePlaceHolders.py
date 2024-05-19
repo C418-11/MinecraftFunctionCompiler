@@ -3,9 +3,6 @@
 """
 替换源码中的占位符
 """
-__author__ = "C418____11 <553515788@qq.com>"
-__version__ = "0.0.1Dev"
-
 
 import os
 import re
@@ -19,10 +16,8 @@ def replace_placeholders(code: str, data: dict) -> str:
 
     :param code: 源码
     :type code: str
-
     :param data: 数据
     :type data: dict
-
     :return: 替换后的代码
     :rtype: str
     """
@@ -44,10 +39,8 @@ def get_relative_path(a: str, b: str) -> str:
 
     :param a: 路径A
     :type a: str
-
     :param b: 路径B
     :type b: str
-
     :return: 相对路径
     :rtype: str
     """
@@ -83,10 +76,8 @@ def get_files(base_path: str, root_dir: str) -> str:
 
     :param base_path: 基础路径
     :type base_path: str
-
     :param root_dir: 根目录
     :type root_dir: str
-
     :return: 文件路径
     :rtype: str
     """

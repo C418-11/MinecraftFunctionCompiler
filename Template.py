@@ -3,10 +3,6 @@
 """
 模版函数处理
 """
-__author__ = "C418____11 <553515788@qq.com>"
-__version__ = "0.0.1Dev"
-
-
 
 import ast
 import functools
@@ -14,7 +10,9 @@ import importlib
 import inspect
 import sys
 import traceback
-from typing import Callable, TypeVar
+from typing import Any
+from typing import Callable
+from typing import TypeVar
 
 from Constant import ResultExt
 from Constant import ScoreBoards
@@ -78,7 +76,7 @@ class NameNode:
         return f"{type(self).__name__}({self.name=}, {self.namespace=})"
 
 
-def _parse_node(node, namespace: str):
+def _parse_node(node: Any, namespace: str):
     """
     尝试把AST节点转换成包含NameNode的python类型
 

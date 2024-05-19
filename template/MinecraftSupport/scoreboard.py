@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # cython: language_level = 3
 # MCFC: Template
+"""
+对计分板操作的支持
+"""
 
 from Constant import Flags
 from Constant import ResultExt
@@ -33,13 +36,6 @@ def _get_default(self: dict, key: str, default):
 
 
 def _get_score(name: str, objective: str, *, namespace: str = None):
-    """
-    判断(变量|值) 是否等于指定计分板中的值
-
-    :param name: 目标
-    :param objective: 计分板
-    """
-
     if namespace is None:
         raise ValueError("namespace is None")
 
@@ -56,19 +52,16 @@ def _get_score(name: str, objective: str, *, namespace: str = None):
 
 @register_func(_get_score)
 def get_score(name: str, objective: str):
+    """
+    从计分板中获取值
+
+    :param name: 目标
+    :param objective: 计分项
+    """
     return _get_default(SB_MAP[objective], name, 0)
 
 
 def _write_score(name: str, objective: str, value: int, *, namespace: str):
-    """
-    将值写入计分板
-
-    :param name: 目标
-    :param objective: 计分板
-    :param value: 值
-    :param namespace: 命名空间 !!!该值应当由编译器自动传入!!!
-    """
-
     command = ''
 
     if isinstance(value, NameNode):
@@ -92,6 +85,13 @@ def _write_score(name: str, objective: str, value: int, *, namespace: str):
 
 @register_func(_write_score)
 def write_score(name: str, objective: str, value: int):
+    """
+    将值写入计分板
+
+    :param name: 目标
+    :param objective: 计分项
+    :param value: 值
+    """
     SB_MAP[objective][name] = value
 
 

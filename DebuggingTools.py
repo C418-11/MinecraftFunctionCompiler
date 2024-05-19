@@ -4,9 +4,6 @@
 一些调试用MCF命令生成器
 """
 
-__author__ = "C418____11 <553515788@qq.com>"
-__version__ = "0.0.1Dev"
-
 import json
 
 from Constant import Flags
@@ -20,13 +17,10 @@ def IF_FLAG(flag: str, cmd: str, *, line_break: bool = False) -> str:
 
     :param flag: 标志名
     :type flag: str
-
     :param cmd: 条件成立时执行的命令
     :type cmd: str
-
     :param line_break: 是否换行
     :type line_break: bool
-
     :return: 生成的命令
     :rtype: str
     """
@@ -50,19 +44,14 @@ def DEBUG_OBJECTIVE(
 
     :param raw_json: 源JSON文本
     :type raw_json: dict
-
     :param objective: 目标计分项
     :type objective: str
-
     :param name: 计分目标
     :type name: str
-
     :param from_objective: 源积分项
     :type from_objective: str
-
     :param from_name: 源计分目标
     :type from_name: str
-
     :return: 生成的命令
     :rtype: str
     """
@@ -114,7 +103,6 @@ def DEBUG_TEXT(*raw_json: dict) -> str:
 
     :param raw_json: 源JSON文本
     :type raw_json: dict
-
     :return: 生成的命令
     :rtype: str
     """
@@ -158,10 +146,8 @@ def FORCE_COMMENT(*texts: str, **kv_texts: str) -> str:
 
     :param texts: 调试文本
     :type texts: str
-
     :param kv_texts: 调试键值对
     :type kv_texts: str
-
     :return: 生成的注释
     :rtype: str
     """
@@ -188,10 +174,8 @@ def COMMENT(*texts: str, **kv_texts: str) -> str:
 
     :param texts: 调试文本
     :type texts: str
-
     :param kv_texts: 调试键值对
     :type kv_texts: str
-
     :return: 生成的注释
     :rtype: str
     """

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 import ast
 import json
 import os
@@ -188,16 +187,12 @@ def sbp_return(func_path: str, level: str, *, name: str, objective: str) -> tupl
 
     :param func_path: 断点切断后恢复执行需要调用的函数
     :type func_path: str
-
     :param level: 文件命名空间层级名
     :type level: str
-
     :param name: 标记位目标
     :type name: str
-
     :param objective: 标记位计分项
     :type objective: str
-
     :returns: 生成的命令字符串, 是否继续抛出断点
     :rtype: tuple[str, bool] | str
     """
@@ -243,29 +238,24 @@ def file_ns_path(path: str, *args) -> str:
 
     :param path: 文件命名空间
     :type path: str
-
     :param args: 需要拼接的路径
     :type args: str
-
     :return: 拼接后的路径
     :rtype: str
     """
     return os.path.normpath(os.path.join(SAVE_PATH, path, *args))
 
 
-def generate_code(node, namespace: str, file_ns: str) -> str:
+def generate_code(node: Any, namespace: str, file_ns: str) -> str:
     """
     递归生成命令
 
     :param node: 需要被处理的AST节点
     :type node: ast.AST
-
     :param namespace: 当前的命名空间
     :type namespace: str
-
     :param file_ns: 当前的文件命名空间
     :type file_ns: str
-
     :return: 生成的命令字符串
     :rtype: str
     """
@@ -950,7 +940,6 @@ def _deep_sorted(value: Any) -> Any:
 
     :param value: 需要排序的值
     :type value: Any
-
     :return: 排序后的值
     :rtype: Any
     """

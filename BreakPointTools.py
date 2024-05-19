@@ -4,9 +4,6 @@
 抛出, 更新, 处理断点
 """
 
-__author__ = "C418____11 <553515788@qq.com>"
-__version__ = "0.0.1Dev"
-
 import json
 import os
 import re
@@ -29,13 +26,10 @@ def BreakPointFlag(func: str | None, *args, **kwargs) -> str:
 
     :param func: 断点处理函数注册名
     :type func: str | None
-
     :param args: 断点处理函数参数
     :type args: Any
-
     :param kwargs: 断点处理函数关键字参数
     :type kwargs: Any
-
     :return: 生成的断点标记
     :rtype: str
     """
@@ -55,7 +49,6 @@ def register_processor(name: str | None) -> Callable[[Processor_T], Processor_T]
 
     :param name: 注册名
     :type name: str | None
-
     :return: 用于注册的装饰器
     :rtype: Callable[[Processor_T], Processor_T]
     """
@@ -66,7 +59,6 @@ def register_processor(name: str | None) -> Callable[[Processor_T], Processor_T]
 
         :param func: 断点处理函数
         :type func: Processor_T
-
         :return: 原样返回所装饰的函数
         :rtype: Processor_T
         """
@@ -91,16 +83,12 @@ def raiseBreakPoint(file_namespace: str, func: str | None, *func_args, **func_kw
 
     :param file_namespace: 抛出所在的文件命名空间
     :type file_namespace: str
-
     :param func: 断点处理函数注册名
     :type func: str | None
-
     :param func_args: 断点处理函数参数
     :type func_args: Any
-
     :param func_kwargs: 断点处理函数关键字参数
     :type func_kwargs: Any
-
     :return: None
     :rtype: None
     """
@@ -127,7 +115,6 @@ def updateBreakPoint(file_namespace: str) -> str:
 
     :param file_namespace: 需要更新的文件命名空间
     :type file_namespace: str
-
     :return: 断点处理函数生成的命令
     :rtype: str
     """
@@ -186,13 +173,10 @@ class SplitBreakPoint:
 
         :param file_path: 写入的文件路径
         :type file_path: str
-
         :param file_namespace: 当前的文件命名空间
         :type file_namespace: str
-
         :param encoding: 文件编码
         :type encoding: str
-
         :return: None
         :rtype: None
         """
@@ -221,7 +205,6 @@ class SplitBreakPoint:
 
         :param text: 需要解析的注释文本
         :type text: str
-
         :return: None
         :rtype: None
         """
@@ -270,7 +253,6 @@ class SplitBreakPoint:
 
         :param text: 文本
         :type text: str
-
         :return: None
         :rtype: None
         """
@@ -302,7 +284,6 @@ class SplitBreakPoint:
 
         :param text: 文本
         :type text: str
-
         :return: None
         :rtype: None
         """
@@ -314,7 +295,6 @@ class SplitBreakPoint:
 
         :param txt: 文本
         :type txt: str
-
         :return: 是否是注释行
         :rtype: bool
         """
@@ -334,7 +314,6 @@ class SplitBreakPoint:
 
         :param txt: 待处理文本
         :type txt: str
-
         :return: 是否处理了注释
         :rtype: bool
         """
@@ -349,11 +328,11 @@ class SplitBreakPoint:
         return False
 
     def close(self) -> None:
+        # noinspection GrazieInspection
         """
         关闭文件
 
         :return: None
-
         :rtype: None
         """
         if not self.closed:

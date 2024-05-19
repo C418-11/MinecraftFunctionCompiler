@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # cython: language_level = 3
 # MCFC: Template
+"""
+对一些python内置函数的支持
+"""
 
 import json
 
@@ -66,7 +69,19 @@ def _tprint(*objects, sep: str = ' ', end: str = '\n'):
 
 
 @register_func(_tprint)
-def tprint(*objects, sep: str = ' ', end: str = '\n'):
+def tprint(*objects, sep: str = ' ', end: str = '\n') -> None:
+    """
+    print的等价模板函数
+
+    :param objects: 需要打印的对象
+    :type objects: Any
+    :param sep: 分隔符
+    :type sep: str
+    :param end: 结束符
+    :type end: str
+    :return: None
+    :rtype: None
+    """
     global print_end
 
     if not isinstance(sep, str):
@@ -177,8 +192,14 @@ def _tbreakpoint(*, file_namespace: str):
 
 
 @register_func(_tbreakpoint)
-def tbreakpoint(*args, **kwargs):
-    breakpoint(*args, **kwargs)
+def tbreakpoint() -> None:
+    """
+    程序将在此处中断，并显示调用栈。
+
+    :return: None
+    :rtype: None
+    """
+    breakpoint()
 
 
 __all__ = (

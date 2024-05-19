@@ -3,10 +3,6 @@
 """
 处理函数调用参数类型
 """
-__author__ = "C418____11 <553515788@qq.com>"
-__version__ = "0.0.1Dev"
-
-
 
 from abc import ABC
 from collections import OrderedDict

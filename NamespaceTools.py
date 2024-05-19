@@ -3,9 +3,6 @@
 """
 命名空间处理工具函数
 """
-__author__ = "C418____11 <553515788@qq.com>"
-__version__ = "0.0.1Dev"
-
 
 import ast
 from collections import OrderedDict
@@ -40,10 +37,8 @@ def ns_init(namespace: str, ns_type: str) -> None:
 
     :param namespace: 命名空间
     :type namespace: str
-
     :param ns_type: 命名空间类型
     :type ns_type: str
-
     :return: None
     :rtype: None
     """
@@ -59,16 +54,12 @@ def ns_setter(name: str, targe_namespace: str, namespace: str, ns_type: str = No
 
     :param name: 名称
     :type name: str
-
     :param targe_namespace: 指向的命名空间
     :type targe_namespace: str
-
     :param namespace: 设置的命名空间
     :type namespace: str
-
     :param ns_type: 命名空间类型
     :type ns_type: str
-
     :return: None
     :rtype: None
     """
@@ -95,13 +86,10 @@ def ns_getter(name, namespace: str, ret_raw: bool = False) -> tuple[str | dict, 
 
     :param name: 寻找的名称
     :type name: str
-
     :param namespace: 寻找的命名空间
     :type namespace: str
-
     :param ret_raw: 是否直接返回源字典
     :type ret_raw: bool
-
     :returns: (完整命名空间 | 命名空间字典, 基础命名空间)
     :rtype: tuple[str | dict, str]
     """
@@ -148,16 +136,12 @@ def node_to_namespace(
 
     :param node: AST节点
     :type node: ast.Name | ast.Attribute
-
     :param namespace: 当前命名空间
     :type namespace: str
-
     :param not_exists_ok: 名称不存在时在当前命名空间下生成
     :type not_exists_ok: bool
-
     :param ns_type: 自动生成时填入的命名空间类型
     :type ns_type: str
-
     :returns: (name, full_namespace, root_namespace)
     :rtype: tuple[str, str, str]
     """
@@ -207,7 +191,6 @@ def store_local(namespace: str) -> tuple[str, str]:
 
     :param namespace: 目标命名空间
     :type namespace: str
-
     :returns: (保存用命令, 加载用命令)
     :rtype: tuple[str, str]
     """
@@ -312,16 +295,12 @@ def file_ns_init(file_namespace: str, level: str | None, file_ns_type: str, ns: 
 
     :param file_namespace: 文件命名空间
     :type file_namespace: str
-
     :param level: 文件层级名
     :type level: str | None
-
     :param file_ns_type: 文件命名空间类型
     :type file_ns_type: str
-
     :param ns: 文件命名空间所对应的普通命名空间
     :type ns: str
-
     :return: None
     :rtype: None
     """
@@ -342,22 +321,16 @@ def file_ns_setter(
 
     :param name: 名称
     :type name: str
-
     :param targe_file_namespace: 指向的文件命名空间
     :type targe_file_namespace: str
-
     :param file_namespace: 设置的文件命名空间
     :type file_namespace: str
-
     :param level: 文件层级名
     :type level: str | None
-
     :param file_ns_type: 文件命名空间类型
     :type file_ns_type: str
-
     :param ns: 文件命名空间所对应的普通命名空间
     :type ns: str
-
     :return: None
     :rtype: None
     """
@@ -386,13 +359,10 @@ def file_ns_getter(name: str, namespace: str, ret_raw: bool = False) -> tuple[st
 
     :param name: 寻找的名称
     :type name: str
-
     :param namespace: 寻找的文件命名空间
     :type namespace: str
-
     :param ret_raw: 是否返回源字典
     :type ret_raw: bool
-
     :returns: (完整文件命名空间 | 文件命名空间字典, 基础文件命名空间)
     :rtype: tuple[str | dict, str]
     """

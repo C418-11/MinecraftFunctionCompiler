@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # cython: language_level = 3
 # MCFC: Template
+"""
+对bossbar操作的支持
+"""
 import json
 
 from Constant import DECIMAL_PRECISION
