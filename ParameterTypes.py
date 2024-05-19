@@ -9,6 +9,9 @@ from collections import OrderedDict
 
 
 class ABCParameterType(ABC):
+    """
+    ABCParameterType is an abstract class for parameter types.
+    """
     def __init__(self, name):
         self.name = name
 
@@ -17,6 +20,9 @@ class ABCParameterType(ABC):
 
 
 class ABCDefaultParameterType(ABCParameterType):
+    """
+    ABCDefaultParameterType is an abstract class for parameter types with default values.
+    """
     def __init__(self, name, default):
         super().__init__(name)
         self.default = default

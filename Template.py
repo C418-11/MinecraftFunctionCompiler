@@ -21,21 +21,39 @@ template_funcs = {}
 
 
 class NameNode:
-    def __init__(self, name, *, namespace):
-        self.name = name
-        self.namespace = namespace
+    """
+    用于传参指定计分目标
+    """
+    def __init__(self, name: str, *, namespace: str) -> None:
+        self.name: str = name
+        self.namespace: str = namespace
 
     @property
-    def code(self):
+    def code(self) -> str:
+        """
+        获取计分目标的编码结果
+
+        :return: 计分目标编码结果
+        """
         return SB_Name2Code[ScoreBoards.Vars][f"{self.namespace}.{self.name}"]
 
-    def toResult(self):
+    def toResult(self) -> str:
+        """
+        生成将计分目标赋值给 {namespace}{ResultExt} 的指令
+
+        :return: 生成的指令
+        """
         return SB_ASSIGN(
             f"{self.namespace}{ResultExt}", ScoreBoards.Temp,
             f"{self.namespace}.{self.name}", ScoreBoards.Vars
         )
 
-    def toJson(self):
+    def toJson(self) -> dict:
+        """
+        生成计分目标的原始JSON文本
+
+        :return: 生成的JSON文本
+        """
         return {"score": {"name": f"{self.code}", "objective": ScoreBoards.Vars}}
 
     def __str__(self):
@@ -45,9 +63,12 @@ class NameNode:
 def _parse_node(node, namespace: str):
     """
     尝试把AST节点转换成包含NameNode的python类型
-    :param node:
-    :param namespace:
-    :return:
+
+    :param node: AST节点
+
+    :param namespace: 调用者命名空间
+
+    :return: 转换后结果
     """
     if isinstance(node, ast.Constant):
         return node.value
@@ -67,7 +88,9 @@ Callable_T = TypeVar("Callable_T", bound=Callable)
 def register_func(func_for_compile: Callable[..., str]) -> Callable[[Callable_T], Callable_T]:
     """
     用于注册模版函数的装饰器
+
     :param func_for_compile: 编译用函数
+
     :return: 装饰器
     """
     parameter_set = set(inspect.signature(func_for_compile).parameters.keys())
@@ -82,10 +105,15 @@ def register_func(func_for_compile: Callable[..., str]) -> Callable[[Callable_T]
     ) -> str:
         """
         包装编译用函数, 对参数和返回值进行处理
+
         :param args: 函数参数列表
+
         :param kwargs: 函数关键字参数
+
         :param namespace: 调用者命名空间
+
         :param file_namespace: 调用者文件命名空间
+
         :return: 编译出的命令字符串 (末尾自带'\n')
         """
         if args is None:
@@ -133,7 +161,9 @@ def register_func(func_for_compile: Callable[..., str]) -> Callable[[Callable_T]
     def decorator(func_for_python: Callable_T) -> Callable_T:
         """
         以函数名称注册编译用函数, 不对函数进行任何处理
+
         :param func_for_python: python环境下的函数
+
         :return: 原样返回函数
         """
         package_name = inspect.getmodule(func_for_python).__name__
@@ -148,7 +178,9 @@ def register_func(func_for_compile: Callable[..., str]) -> Callable[[Callable_T]
 def check_template(file_path: str) -> bool:
     """
     检查文件是否为模板文件
+
     :param file_path: 要检查的文件路径
+
     :return: 是否为模版文件
     """
     import re
@@ -169,6 +201,7 @@ def check_template(file_path: str) -> bool:
 def init_template(name: str) -> None:
     """
     初始化模板文件
+
     :param name: 访问模板文件的路径
     """
     module = importlib.import_module(name)

@@ -13,6 +13,7 @@ SB_Code2Name: dict[str, dict[str, str]] = {}
 def init_objective(objective: str) -> None:
     """
     初始化计分项
+
     :param objective: 计分项id
     """
     if objective not in SB_Name2Code:
@@ -23,7 +24,9 @@ def init_objective(objective: str) -> None:
 def init_name(name: str, objective: str) -> None:
     """
     初始化计分目标
+
     :param name: 目标
+
     :param objective: 计分项
     """
     init_objective(objective)
@@ -34,7 +37,9 @@ def init_name(name: str, objective: str) -> None:
 def _init_flags(name: str, objective: str) -> None:
     """
     如果是标记位计分项，则初始化计分目标
+
     :param name: 目标
+
     :param objective: 计分项
     """
     if objective == ScoreBoards.Flags:
@@ -49,8 +54,11 @@ _SB_ID = 0
 def gen_code(name: str, objective: str) -> str:
     """
     编码计分目标 (Flag计分项不会被编码)
+
     :param name: 目标
+
     :param objective: 计分项
+
     :return: 编码后的计分目标
     """
     global _SB_ID
@@ -110,13 +118,21 @@ def CHECK_SB(
     如果检查条件成立, 就执行cmd
 
     :param check_type: 检查类型 (SBCheckType)
+
     :param a_name: 目标A
+
     :param a_objective: 计分项A
+
     :param compare_op: 比较类型 (SBCompareType)
+
     :param b_name: 目标B
+
     :param b_objective: 计分项B
+
     :param cmd: 要执行的命令
+
     :param line_break: 是否进行换行
+
     :return: 生成的命令
     """
     count_line = cmd.count('\n')
@@ -143,11 +159,17 @@ def CHECK_SB(
 def SB_ASSIGN(to_name: str, to_objective: str, from_name: str, from_objective: str, *, line_break: bool = True) -> str:
     """
     将from_name的值赋给to_name
+
     :param to_name: 目标计分目标
+
     :param to_objective: 目标计分项
+
     :param from_name: 源计分目标
+
     :param from_objective: 源计分项
+
     :param line_break: 是否进行换行
+
     :return: 生成的命令
     """
     _init_flags(from_name, from_objective)
@@ -189,12 +211,20 @@ def SB_OP(
         line_break: bool = True
 ) -> str:
     """
+    对两个计分目标做任意支持的操作
+
     :param operation: 操作类型 (SBOperationType)
+
     :param target_name: 目标
+
     :param target_objective: 目标记分项
+
     :param selector: 选择器
+
     :param objective: 记分项
+
     :param line_break: 是否进行换行
+
     :return: 生成的命令
     """
 
@@ -217,9 +247,13 @@ def SB_OP(
 def SB_RESET(name: str, objective: str, *, line_break: bool = True) -> str:
     """
     重置计分目标
+
     :param name: 目标
+
     :param objective: 计分项
+
     :param line_break: 是否进行换行
+
     :return: 生成的命令
     """
     init_objective(objective)
@@ -233,10 +267,15 @@ def SB_RESET(name: str, objective: str, *, line_break: bool = True) -> str:
 def SB_CONSTANT(name: str, objective: str, value: int, *, line_break: bool = True) -> str:
     """
     将计分目标设置为常量
+
     :param name: 目标
+
     :param objective: 计分项
+
     :param value: 常量值
+
     :param line_break: 是否换行
+
     :return: 生成的命令
     """
     command = f"scoreboard players set {gen_code(name, objective)} {objective} {value}"
