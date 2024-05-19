@@ -7,7 +7,6 @@ __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
 
-
 import os
 import re
 
@@ -19,10 +18,13 @@ def replace_placeholders(code: str, data: dict) -> str:
     替换代码中的占位符
 
     :param code: 源码
+    :type code: str
 
     :param data: 数据
+    :type data: dict
 
     :return: 替换后的代码
+    :rtype: str
     """
     matches = re.findall(r'\$\{([^{}$]+)}', code)
 
@@ -41,10 +43,13 @@ def get_relative_path(a: str, b: str) -> str:
     计算路径A相对于路径B的相对路径
 
     :param a: 路径A
+    :type a: str
 
     :param b: 路径B
+    :type b: str
 
     :return: 相对路径
+    :rtype: str
     """
     # 获取路径A和B的绝对路径
     a = os.path.abspath(a)
@@ -77,10 +82,13 @@ def get_files(base_path: str, root_dir: str) -> str:
     获取指定目录下的所有文件路径的生成器
 
     :param base_path: 基础路径
+    :type base_path: str
 
     :param root_dir: 根目录
+    :type root_dir: str
 
     :return: 文件路径
+    :rtype: str
     """
     for root, dirs, files in os.walk(os.path.join(base_path, root_dir)):
         for file in files:

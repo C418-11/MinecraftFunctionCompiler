@@ -182,17 +182,24 @@ def mkdirs(path: str, *, exist_ok: bool = False):
 
 
 @register_processor("return")
-def sbp_return(func_path: str, level: str, *, name: str, objective: str):
+def sbp_return(func_path: str, level: str, *, name: str, objective: str) -> tuple[str, bool] | str:
     """
     处理return语句的断点
 
     :param func_path: 断点切断后恢复执行需要调用的函数
+    :type func_path: str
 
     :param level: 文件命名空间层级名
+    :type level: str
 
     :param name: 标记位目标
+    :type name: str
 
     :param objective: 标记位计分项
+    :type objective: str
+
+    :returns: 生成的命令字符串, 是否继续抛出断点
+    :rtype: tuple[str, bool] | str
     """
 
     def _process_raise() -> tuple[str, bool]:
@@ -235,10 +242,13 @@ def file_ns_path(path: str, *args) -> str:
     将文件命名空间转换为路径
 
     :param path: 文件命名空间
+    :type path: str
 
     :param args: 需要拼接的路径
+    :type args: str
 
     :return: 拼接后的路径
+    :rtype: str
     """
     return os.path.normpath(os.path.join(SAVE_PATH, path, *args))
 
@@ -248,12 +258,16 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
     递归生成命令
 
     :param node: 需要被处理的AST节点
+    :type node: ast.AST
 
     :param namespace: 当前的命名空间
+    :type namespace: str
 
     :param file_ns: 当前的文件命名空间
+    :type file_ns: str
 
     :return: 生成的命令字符串
+    :rtype: str
     """
     if node is None:
         return SB_ASSIGN(
@@ -930,30 +944,32 @@ def generate_code(node, namespace: str, file_ns: str) -> str:
     return f"tellraw @a {err_msg}\n" + COMMENT("无法解析的节点:") + COMMENT(ast.dump(node, indent=4))
 
 
-def _deep_sorted(d: dict | OrderedDict) -> OrderedDict | Any:
+def _deep_sorted(value: Any) -> Any:
     """
     深度排序
 
-    :param d: 需要排序的值
+    :param value: 需要排序的值
+    :type value: Any
 
     :return: 排序后的值
+    :rtype: Any
     """
-    if type(d) is set:
-        d = list(d)
-    if type(d) in (list, tuple):
+    if type(value) is set:
+        value = list(value)
+    if type(value) in (list, tuple):
         _processed = []
-        for item in d:
+        for item in value:
             _processed.append(_deep_sorted(item))
         _processed.sort()
-        return type(d)(_processed)
-    if type(d) is dict:
-        d = OrderedDict(d)
-    if type(d) is not OrderedDict:
-        return d
+        return type(value)(_processed)
+    if type(value) is dict:
+        value = OrderedDict(value)
+    if type(value) is not OrderedDict:
+        return value
 
     _sorted_dict = OrderedDict()
-    for key in sorted(d.keys()):
-        _sorted_dict[key] = _deep_sorted(d[key])
+    for key in sorted(value.keys()):
+        _sorted_dict[key] = _deep_sorted(value[key])
     return _sorted_dict
 
 

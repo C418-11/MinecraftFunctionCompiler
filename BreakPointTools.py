@@ -31,8 +31,10 @@ def BreakPointFlag(func: str | None, *args, **kwargs) -> str:
     :type func: str | None
 
     :param args: 断点处理函数参数
+    :type args: Any
 
     :param kwargs: 断点处理函数关键字参数
+    :type kwargs: Any
 
     :return: 生成的断点标记
     :rtype: str
@@ -94,10 +96,10 @@ def raiseBreakPoint(file_namespace: str, func: str | None, *func_args, **func_kw
     :type func: str | None
 
     :param func_args: 断点处理函数参数
-    :type func_args: tuple
+    :type func_args: Any
 
     :param func_kwargs: 断点处理函数关键字参数
-    :type func_kwargs: dict
+    :type func_kwargs: Any
 
     :return: None
     :rtype: None

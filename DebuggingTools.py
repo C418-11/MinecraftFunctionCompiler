@@ -19,12 +19,16 @@ def IF_FLAG(flag: str, cmd: str, *, line_break: bool = False) -> str:
     如果标记位等于True标记位, 则执行 cmd
 
     :param flag: 标志名
+    :type flag: str
 
     :param cmd: 条件成立时执行的命令
+    :type cmd: str
 
     :param line_break: 是否换行
+    :type line_break: bool
 
     :return: 生成的命令
+    :rtype: str
     """
     command = f"execute if score {flag} {ScoreBoards.Flags} = {Flags.TRUE} {ScoreBoards.Flags} run {cmd}"
     if line_break:
@@ -45,16 +49,22 @@ def DEBUG_OBJECTIVE(
     生成运行时显示调试值的命令
 
     :param raw_json: 源JSON文本
+    :type raw_json: dict
 
     :param objective: 目标计分项
+    :type objective: str
 
     :param name: 计分目标
+    :type name: str
 
     :param from_objective: 源积分项
+    :type from_objective: str
 
     :param from_name: 源计分目标
+    :type from_name: str
 
     :return: 生成的命令
+    :rtype: str
     """
     if not ENABLE_DEBUGGING:
         return ''
@@ -101,6 +111,12 @@ def DEBUG_OBJECTIVE(
 def DEBUG_TEXT(*raw_json: dict) -> str:
     """
     生成运行时显示调试源JSON文本的命令
+
+    :param raw_json: 源JSON文本
+    :type raw_json: dict
+
+    :return: 生成的命令
+    :rtype: str
     """
     if not ENABLE_DEBUGGING:
         return ''
@@ -136,15 +152,18 @@ class DebugTip:
 GENERATE_COMMENTS: bool = True
 
 
-def FORCE_COMMENT(*texts: str, **kv_texts) -> str:
+def FORCE_COMMENT(*texts: str, **kv_texts: str) -> str:
     """
     强制生成注释文本 (可以安全的包含换行符)
 
     :param texts: 调试文本
+    :type texts: str
 
     :param kv_texts: 调试键值对
+    :type kv_texts: str
 
     :return: 生成的注释
+    :rtype: str
     """
     nor_text = ' '.join(texts)
     kv_text = '\n'.join(f"{k} = {v}" for k, v in kv_texts.items())
@@ -163,15 +182,18 @@ def FORCE_COMMENT(*texts: str, **kv_texts) -> str:
     return ret
 
 
-def COMMENT(*texts: str, **kv_texts) -> str:
+def COMMENT(*texts: str, **kv_texts: str) -> str:
     """
     生成注释文本 (可以安全的包含换行符)
 
     :param texts: 调试文本
+    :type texts: str
 
     :param kv_texts: 调试键值对
+    :type kv_texts: str
 
     :return: 生成的注释
+    :rtype: str
     """
     if not GENERATE_COMMENTS:
         return ''
