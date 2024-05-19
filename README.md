@@ -148,7 +148,7 @@
 如果你IDE支持执行markdown并且用的是虚拟环境, 你可以直接点击下面指令左边的绿色三角
 
 ```shell
-.\\.venv\\Scripts\\python.exe .\\ReplacePlaceHolders.py
+python.exe .\\ReplacePlaceHolders.py
 ```
 
 ### 2.2.2 编译源码
@@ -158,7 +158,7 @@
 如果你IDE支持执行markdown并且用的是虚拟环境, 你可以直接点击下面指令左边的绿色三角
 
 ```shell
-.\\.venv\\Scripts\\python.exe .\\main.py
+python.exe .\\main.py
 ```
 
 ### 2.2.3 组合编译后的源码
