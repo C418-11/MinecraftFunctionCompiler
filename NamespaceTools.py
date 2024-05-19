@@ -281,16 +281,22 @@ def file_ns_setter(
 ) -> None:
     """
     在指定的文件命名空间下创建一个名称指向目标文件命名空间
+
     :param name: 名称
+
     :param targe_file_namespace: 指向的文件命名空间
+
     :param file_namespace: 设置的文件命名空间
+
     :param level: 文件层级名
+
     :param file_ns_type: 文件命名空间类型
+
     :param ns: 文件命名空间所对应的普通命名空间
     """
     data = {
         name: {
-            ".__target_namespace__": targe_file_namespace,
+            ".__file_namespace__": targe_file_namespace,
             ".__level__": level,
             ".__type__": file_ns_type,
             ".__namespace__": ns,
@@ -340,7 +346,7 @@ def file_ns_getter(name: str, namespace: str, ret_raw: bool = False) -> tuple[st
         raise KeyError(f"{name} not found in namespace {namespace}")
 
     if not ret_raw:
-        last_result = last_result[".__target_namespace__"]
+        last_result = last_result[".__file_namespace__"]
 
     return last_result, '\\'.join(last_ns)
 

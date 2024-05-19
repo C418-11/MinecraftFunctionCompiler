@@ -125,7 +125,7 @@ GENERATE_COMMENTS: bool = True
 
 def FORCE_COMMENT(*texts: str, **kv_texts) -> str:
     """
-    强制生成注释文本 (可以安全的包含'\n')
+    强制生成注释文本 (可以安全的包含换行符)
     :param texts: 调试文本
     :param kv_texts: 调试键值对
     :return: 生成的注释
@@ -149,7 +149,7 @@ def FORCE_COMMENT(*texts: str, **kv_texts) -> str:
 
 def COMMENT(*texts: str, **kv_texts) -> str:
     """
-    生成注释文本 (可以安全的包含'\n')
+    生成注释文本 (可以安全的包含换行符)
     :param texts: 调试文本
     :param kv_texts: 调试键值对
     :return: 生成的注释
