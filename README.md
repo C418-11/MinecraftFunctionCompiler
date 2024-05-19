@@ -4,7 +4,7 @@
 
 欢迎大佬参与开发
 
-[`API文档`(点击跳转)](https://minecraftfunctioncompiler.readthedocs.io/zh/latest/index.html)
+### [`API文档`(点击跳转)](https://minecraftfunctioncompiler.readthedocs.io/zh/latest/index.html)
 
 # 目录
 

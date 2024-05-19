@@ -241,6 +241,10 @@ def init_template(name: str) -> None:
 class CommandResult:
     """
     临时的东西, 后面大概率弃用
+
+    .. warning::
+
+        即将弃用
     """
 
     def __init__(self, *other, success: bool, result: int = None):
