@@ -4,6 +4,10 @@
 __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
+"""
+一些调试用MCF命令生成器
+"""
+
 import json
 
 from Constant import Flags

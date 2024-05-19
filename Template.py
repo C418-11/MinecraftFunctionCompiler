@@ -4,6 +4,10 @@
 __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
+"""
+模版函数处理
+"""
+
 import ast
 import functools
 import importlib
@@ -24,6 +28,7 @@ class NameNode:
     """
     用于传参指定计分目标
     """
+
     def __init__(self, name: str, *, namespace: str) -> None:
         self.name: str = name
         self.namespace: str = namespace
@@ -218,6 +223,7 @@ class CommandResult:
     """
     临时的东西, 后面大概率弃用
     """
+
     def __init__(self, *other, success: bool, result: int = None):
         self.success = success
         if not success:

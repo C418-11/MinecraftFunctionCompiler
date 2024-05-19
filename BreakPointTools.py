@@ -4,6 +4,10 @@
 __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
+"""
+抛出, 更新, 处理断点
+"""
+
 import json
 import os
 import re
@@ -50,6 +54,7 @@ def register_processor(name: str | None) -> Callable[[Processor_T], Processor_T]
 
     :return: 用于注册的装饰器
     """
+
     def decorator(func: Processor_T) -> Processor_T:
         """
         注册断点处理函数
@@ -158,6 +163,7 @@ class SplitBreakPoint:
     """
     用于分割断点的类
     """
+
     def __init__(self, file_path: str, file_namespace: str, encoding: str = "utf-8") -> None:
         """
         初始化

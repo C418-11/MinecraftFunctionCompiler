@@ -4,10 +4,7 @@
 
 欢迎大佬参与开发
 
-
-
 [`API文档`(点击跳转)](https://minecraftfunctioncompiler.readthedocs.io/zh/latest/index.html)
-
 
 # 目录
 
@@ -263,7 +260,6 @@ func_for_compile 函数会有一些特殊参数
 ``` python
 from BreakPointTools import raiseBreakPoint
 ```
-
 
 在需要断点的位置调用`raiseBreakPoint`函数
 

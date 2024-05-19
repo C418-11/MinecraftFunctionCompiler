@@ -4,6 +4,10 @@
 __author__ = "C418____11 <553515788@qq.com>"
 __version__ = "0.0.1Dev"
 
+"""
+处理函数调用参数类型
+"""
+
 from abc import ABC
 from collections import OrderedDict
 
@@ -12,6 +16,7 @@ class ABCParameterType(ABC):
     """
     ABCParameterType is an abstract class for parameter types.
     """
+
     def __init__(self, name):
         self.name = name
 
@@ -23,6 +28,7 @@ class ABCDefaultParameterType(ABCParameterType):
     """
     ABCDefaultParameterType is an abstract class for parameter types with default values.
     """
+
     def __init__(self, name, default):
         super().__init__(name)
         self.default = default

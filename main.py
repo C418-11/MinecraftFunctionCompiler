@@ -194,6 +194,7 @@ def sbp_return(func_path: str, level: str, *, name: str, objective: str):
 
     :param objective: 标记位计分项
     """
+
     def _process_raise() -> tuple[str, bool]:
         command = ''
         keep_raise: bool = True
