@@ -214,7 +214,7 @@ class SplitBreakPoint:
             return
 
         name, ext = os.path.splitext(self._writing_name)
-        id_name = f"{name}_{hex(self._pb_id)[2:]}"
+        id_name = f"{name}-{hex(self._pb_id)[2:]}"
         writing_name = f"{id_name}{ext}"
 
         match_func = self._func_pattern.findall(text)
