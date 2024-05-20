@@ -16,6 +16,7 @@ from typing import TypeVar
 
 from Constant import ResultExt
 from Constant import ScoreBoards
+from DebuggingTools import COMMENT
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_Name2Code
 
@@ -118,6 +119,9 @@ def register_func(func_for_compile: Callable[..., str]) -> Callable[[Callable_T]
             args: list | None,
             kwargs: dict | None,
             *,
+            env,
+            c_conf,
+            g_conf,
             namespace: str,
             file_namespace: str
     ) -> str:
@@ -132,32 +136,17 @@ def register_func(func_for_compile: Callable[..., str]) -> Callable[[Callable_T]
         :type namespace: str
         :param file_namespace: 调用者文件命名空间
         :type file_namespace: str
-        :return: 编译出的命令字符串 (末尾自带'\n')
+        :return: 编译出的命令字符串 (末尾自带换行符)
         :rtype: str
         """
-        if args is None:
-            args = []
-        if kwargs is None:
-            kwargs = []
-
-        if not isinstance(args, list):
-            raise TypeError("args must be list")
-        if not isinstance(kwargs, list):
-            raise TypeError("kwargs must be list")
-
-        new_args = []
-        for arg in args:
-            new_args.append(_parse_node(arg, namespace))
-
-        new_kwargs = {}
-        for kwarg in kwargs:
-            if not isinstance(kwarg, ast.keyword):
-                raise TypeError("kwargs must be keyword")
-            new_kwargs[kwarg.arg] = _parse_node(kwarg.value, namespace)
 
         data = {
             "namespace": namespace,
-            "file_namespace": file_namespace
+            "file_namespace": file_namespace,
+
+            "env": env,
+            "c_conf": c_conf,
+            "g_conf": g_conf
         }
 
         optional_parameters = set(data.keys())
@@ -165,7 +154,7 @@ def register_func(func_for_compile: Callable[..., str]) -> Callable[[Callable_T]
 
         required_kwargs = {k: data[k] for k in required_parameters}
 
-        command = func_for_compile(*new_args, **new_kwargs, **required_kwargs)
+        command = func_for_compile(*args, **kwargs, **required_kwargs)
         if command is None:
             command = '\n'
 
@@ -219,7 +208,7 @@ def check_template(file_path: str) -> bool:
     return False
 
 
-def init_template(name: str) -> None:
+def init_template(name: str, env, c_conf, g_conf) -> None:
     """
     初始化模板文件
 
@@ -230,7 +219,7 @@ def init_template(name: str) -> None:
     """
     module = importlib.import_module(name)
     try:
-        module.init()
+        module.init(env, c_conf, g_conf)
     except AttributeError:
         pass
     except Exception as err:
@@ -238,10 +227,33 @@ def init_template(name: str) -> None:
         print(f"Template:模板 {name} 初始化失败", file=sys.stderr)
 
 
+def call_template(env, c_conf, g_conf, template_func_name, node: ast.Call, namespace, file_namespace):
+    func = template_funcs[template_func_name]
+    commands = ''
+    commands += COMMENT(f"Template.Call:调用模板函数", func=template_func_name)
+
+    args = []
+    kwargs = {}
+
+    for arg in node.args:
+        args.append(_parse_node(arg, namespace))
+
+    for kwarg in node.keywords:
+        if not isinstance(kwarg, ast.keyword):
+            raise TypeError("kwargs must be keyword")
+        kwargs[kwarg.arg] = _parse_node(kwarg.value, namespace)
+
+    commands += func(
+        args, kwargs,
+        env=env, c_conf=c_conf, g_conf=g_conf,
+        namespace=namespace, file_namespace=file_namespace
+    )
+    commands += COMMENT(f"Template.Call:调用模版函数结束")
+    return commands
+
+
 class CommandResult:
     """
-    临时的东西, 后面大概率弃用
-
     .. warning::
 
         即将弃用

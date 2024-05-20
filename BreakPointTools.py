@@ -3,15 +3,13 @@
 """
 抛出, 更新, 处理断点
 """
-
+import inspect
 import json
 import os
 import re
 import warnings
 from typing import Callable
 from typing import TypeVar
-
-from NamespaceTools import file_ns_getter
 
 Processor = Callable[[str | None, str | None, ...], str | None | tuple[str, bool]]
 
@@ -77,7 +75,7 @@ def register_processor(name: str | None) -> Callable[[Processor_T], Processor_T]
 _BP_ID: int = 0
 
 
-def raiseBreakPoint(file_namespace: str, func: str | None, *func_args, **func_kwargs) -> None:
+def raiseBreakPoint(env, file_namespace: str, func: str | None, *func_args, **func_kwargs) -> None:
     """
     抛出断点
 
@@ -94,7 +92,7 @@ def raiseBreakPoint(file_namespace: str, func: str | None, *func_args, **func_kw
     """
     global _BP_ID
     f_ns, f_name = file_namespace.rsplit('\\', maxsplit=1)
-    target_f_ns: dict = file_ns_getter(f_name, f_ns, ret_raw=True)[0]
+    target_f_ns: dict = env.file_ns_getter(f_name, f_ns, ret_raw=True)[0]
 
     if ":breakpoints" not in target_f_ns:
         target_f_ns[":breakpoints"] = {}
@@ -109,7 +107,7 @@ def raiseBreakPoint(file_namespace: str, func: str | None, *func_args, **func_kw
     _BP_ID += 1
 
 
-def updateBreakPoint(file_namespace: str) -> str:
+def updateBreakPoint(env, c_conf, g_conf, file_namespace: str) -> str:
     """
     更新断点
 
@@ -119,7 +117,7 @@ def updateBreakPoint(file_namespace: str) -> str:
     :rtype: str
     """
     f_ns, f_name = file_namespace.rsplit('\\', maxsplit=1)
-    target_f_ns: dict[str, dict[str, ...] | str] = file_ns_getter(f_name, f_ns, ret_raw=True)[0]
+    target_f_ns: dict[str, dict[str, ...] | str] = env.file_ns_getter(f_name, f_ns, ret_raw=True)[0]
 
     level: str = target_f_ns[".__level__"]
 
@@ -137,13 +135,21 @@ def updateBreakPoint(file_namespace: str) -> str:
 
         raw_f_namespace = target_f_ns[file_name][".__file_namespace__"]
         rf_ns, rf_name = raw_f_namespace.rsplit('\\', maxsplit=1)
-        raw_f_ns = file_ns_getter(rf_name, rf_ns, ret_raw=True)[0]
+        raw_f_ns = env.file_ns_getter(rf_name, rf_ns, ret_raw=True)[0]
 
         if ":breakpoints" not in raw_f_ns:
             continue
 
+        params_data = {
+            "func_path": None,
+            "level": level,
+            "env": env,
+            "c_conf": c_conf,
+            "g_conf": g_conf,
+        }
+        data_keys = set(params_data.keys())
+
         for bp_id, bp_data in raw_f_ns[":breakpoints"].items():
-            keep_raise = False
             try:
                 processor = BreakPointProcessor[bp_data["func"]]
             except KeyError:
@@ -152,9 +158,13 @@ def updateBreakPoint(file_namespace: str) -> str:
                     UserWarning,
                     stacklevel=2
                 )
-            else:
-                cmd, keep_raise = processor(None, level, *bp_data["args"], **bp_data["kwargs"])
-                command += cmd
+                continue
+
+            parameters = set(inspect.signature(processor).parameters.keys())
+            required_params = parameters & data_keys
+            required_data = {k: params_data[k] for k in required_params}
+            cmd, keep_raise = processor(*bp_data["args"], **required_data, **bp_data["kwargs"])
+            command += cmd
 
             if keep_raise:
                 raiseBreakPoint(f_name, f_ns, bp_data["func"], *bp_data["args"], **bp_data["kwargs"])
@@ -167,7 +177,7 @@ class SplitBreakPoint:
     用于分割断点的类
     """
 
-    def __init__(self, file_path: str, file_namespace: str, encoding: str = "utf-8") -> None:
+    def __init__(self, env, c_conf, g_conf, file_path: str, file_namespace: str, encoding: str = "utf-8") -> None:
         """
         初始化
 
@@ -180,6 +190,10 @@ class SplitBreakPoint:
         :return: None
         :rtype: None
         """
+        self._env = env
+        self._c_conf = c_conf
+        self._g_conf = g_conf
+
         self._namespace = file_namespace
         self._encoding = encoding
 
@@ -226,7 +240,7 @@ class SplitBreakPoint:
         match_kwargs = match_kwargs[0] if match_kwargs else "{}"
 
         try:
-            func = BreakPointProcessor[func_key]
+            processor = BreakPointProcessor[func_key]
         except KeyError:
             raise Exception(f"SBP: Unknown function: \'{func_key}\', please check if it is registered in the code.")
 
@@ -237,7 +251,20 @@ class SplitBreakPoint:
             raise Exception("SBP: Arguments are not valid json format.")
 
         ns_path = f"{self._namespace}\\{id_name}".replace('\\', '/')
-        result = func(ns_path, None, *args, **kwargs)
+
+        params_data = {
+            "func_path": ns_path,
+            "level": None,
+            "env": self._env,
+            "c_conf": self._c_conf,
+            "g_conf": self._g_conf,
+        }
+        data_keys = set(params_data.keys())
+
+        required_params = set(inspect.signature(processor).parameters.keys()) & data_keys
+        required_data = {k: params_data[k] for k in required_params}
+
+        result = processor(*args, **required_data, **kwargs)
 
         result = '' if result is None else result
 
