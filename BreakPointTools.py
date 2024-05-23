@@ -12,6 +12,8 @@ from io import TextIOWrapper
 from typing import Callable
 from typing import TypeVar
 
+from ABC import ABCEnvironment
+
 Processor = Callable[[str | None, str | None, ...], str | None | tuple[str, bool]]
 
 BreakPointProcessor: dict[str | None, Processor] = {}
@@ -76,12 +78,12 @@ def register_processor(name: str | None) -> Callable[[Processor_T], Processor_T]
 _BP_ID: int = 0
 
 
-def raiseBreakPoint(env, file_namespace: str, func: str | None, *func_args, **func_kwargs) -> None:
+def raiseBreakPoint(env: ABCEnvironment, file_namespace: str, func: str | None, *func_args, **func_kwargs) -> None:
     """
     抛出断点
 
     :param env: 运行环境
-    :type env: Environment
+    :type env: ABCEnvironment
     :param file_namespace: 抛出所在的文件命名空间
     :type file_namespace: str
     :param func: 断点处理函数注册名
@@ -110,12 +112,12 @@ def raiseBreakPoint(env, file_namespace: str, func: str | None, *func_args, **fu
     _BP_ID += 1
 
 
-def updateBreakPoint(env, c_conf, g_conf, file_namespace: str) -> str:
+def updateBreakPoint(env: ABCEnvironment, c_conf, g_conf, file_namespace: str) -> str:
     """
     更新断点
 
     :param env: 运行环境
-    :type env: Environment
+    :type env: ABCEnvironment
     :param c_conf: 编译器配置
     :type c_conf: CompilerConfiguration
     :param g_conf: 全局配置
@@ -186,10 +188,20 @@ class SplitBreakPoint:
     用于分割断点的类
     """
 
-    def __init__(self, env, c_conf, g_conf, file_path: str, file_namespace: str, encoding: str = "utf-8") -> None:
+    def __init__(
+            self,
+            env: ABCEnvironment,
+            c_conf,
+            g_conf,
+            file_path: str,
+            file_namespace: str,
+            encoding: str = "utf-8"
+    ) -> None:
         """
         初始化
 
+        :param env: 运行环境
+        :type env: ABCEnvironment
         :param file_path: 写入的文件路径
         :type file_path: str
         :param file_namespace: 当前的文件命名空间

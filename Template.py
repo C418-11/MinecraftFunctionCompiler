@@ -17,6 +17,7 @@ from typing import TypeVar
 from Constant import ResultExt
 from Constant import ScoreBoards
 from DebuggingTools import COMMENT
+from ABC import ABCEnvironment
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_Name2Code
 
@@ -214,7 +215,7 @@ def check_template(file_path: str) -> bool:
     return False
 
 
-def init_template(name: str, env, c_conf, g_conf) -> None:
+def init_template(name: str, env: ABCEnvironment, c_conf, g_conf) -> None:
     """
     初始化模板文件
 
