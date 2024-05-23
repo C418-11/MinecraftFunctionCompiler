@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 # cython: language_level = 3
+"""
+一堆默认的代码生成器
+"""
 
 import ast
 import inspect

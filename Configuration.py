@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 # cython: language_level = 3
+"""
+定义了一些配置文件
+"""
 
 
 class GlobalConfiguration:

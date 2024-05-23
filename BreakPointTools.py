@@ -3,6 +3,7 @@
 """
 抛出, 更新, 处理断点
 """
+
 import inspect
 import json
 import os
@@ -10,6 +11,7 @@ import re
 import warnings
 from io import TextIOWrapper
 from typing import Callable
+from typing import Self
 from typing import TypeVar
 
 from ABC import ABCEnvironment
@@ -389,17 +391,24 @@ class SplitBreakPoint:
             self.closed = True
 
     def open(self) -> None:
+        # noinspection GrazieInspection
+        """
+        打开文件
+
+        :return: None
+        :rtype: None
+        """
         if self.closed:
             raise Exception("File is closed")
         self._open_file = open(self._file_path, mode='w', encoding=self._encoding)
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         self.open()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
-        return self._open_file.__exit__(exc_type, exc_val, exc_tb)
+        self._open_file.__exit__(exc_type, exc_val, exc_tb)
 
 
 __all__ = (

@@ -24,18 +24,42 @@ DS_LOCAL_TEMP: str = DataStorages.LocalTemp
 
 
 class Namespace:
-    def __init__(self, base_namespace):
+    """
+    命名空间存储及其操作
+    """
+    def __init__(self, base_namespace) -> None:
+        """
+        初始化命名空间
+
+        :param base_namespace: 基础命名空间
+        """
         self._base_ns = base_namespace
         self.namespace_tree: OrderedDict[str, OrderedDict[str, ...]] = OrderedDict()
         self.temp_ns: OrderedDict[str, list[str]] = OrderedDict()
 
     def split_base(self, namespace: str) -> tuple[str, str]:
+        """
+        分割命名空间的基础命名空间
+
+        :param namespace: 命名空间
+        :type namespace: str
+        :return: 基础命名空间和其余部分
+        :rtype: tuple[str, str]
+        """
         if namespace.startswith(self._base_ns):
             base_ns, ns = namespace.split(self._base_ns, 1)
             return base_ns, ns
         raise Exception(f"namespace '{namespace}' is not in base namespace '{self._base_ns}'")
 
     def join_base(self, namespace: str) -> str:
+        """
+        连接基础命名空间
+
+        :param namespace: 命名空间
+        :type namespace: str
+        :return: 连接后的命名空间
+        :rtype: str
+        """
         if self._base_ns.endswith(':'):
             new_namespace = f"{self._base_ns}{namespace}"
         else:
@@ -44,12 +68,40 @@ class Namespace:
         return new_namespace
 
     def init_temp(self, namespace: str) -> None:
+        """
+        初始化编译时临时命名空间存储
+
+        :param namespace: 需要初始化的命名空间
+        :type namespace: str
+        :return: None
+        :rtype: None
+        """
         self.temp_ns[namespace] = []
 
     def append_temp(self, namespace: str, name: str) -> None:
+        """
+        添加MCF运行时临时命名空间
+
+        :param namespace: 存储目标命名空间
+        :type namespace: str
+        :param name: MCF运行时临时命名空间
+        :type name: str
+        :return: None
+        :rtype: None
+        """
         self.temp_ns[namespace].append(name)
 
     def remove_temp(self, namespace: str, name: str) -> None:
+        """
+        移除MCF运行时临时命名空间
+
+        :param namespace: 存储目标命名空间
+        :type namespace: str
+        :param name: MCF运行时临时命名空间
+        :type name: str
+        :return: None
+        :rtype: None
+        """
         self.temp_ns[namespace].remove(name)
 
     def init_root(self, namespace: str, ns_type: str) -> None:
@@ -159,7 +211,7 @@ class Namespace:
         :type namespace: str
         :param not_exists_ok: 名称不存在时在当前命名空间下生成
         :type not_exists_ok: bool
-        :param ns_type: 自动生成时填入的命名空间类型
+        :param ns_type: 不存在时生成填入的命名空间类型
         :type ns_type: str
         :returns: (name, full_namespace, root_namespace)
         :rtype: tuple[str, str, str]
@@ -302,7 +354,13 @@ class Namespace:
 
 
 class FileNamespace:
+    """
+    文件命名空间存储及其操作
+    """
     def __init__(self):
+        """
+        初始化文件命名空间
+        """
         self.namespace_tree = OrderedDict()
 
     def init_root(self, file_namespace: str, level: str | None, file_ns_type: str, ns: str) -> None:
@@ -371,14 +429,14 @@ class FileNamespace:
 
         last_map.update(data)
 
-    def getter(self, name: str, namespace: str, ret_raw: bool = False) -> tuple[str | dict, str]:
+    def getter(self, name: str, file_namespace: str, ret_raw: bool = False) -> tuple[str | dict, str]:
         """
         在指定的文件命名空间下寻找名称，并返回所找到的值
 
         :param name: 寻找的名称
         :type name: str
-        :param namespace: 寻找的文件命名空间
-        :type namespace: str
+        :param file_namespace: 寻找的文件命名空间
+        :type file_namespace: str
         :param ret_raw: 是否返回源字典
         :type ret_raw: bool
         :returns: (完整文件命名空间 | 文件命名空间字典, 基础文件命名空间)
@@ -390,11 +448,11 @@ class FileNamespace:
         ns_ls: list[str] = []
         last_ns: list[str] = []
 
-        for ns_name in namespace.split('\\'):
+        for ns_name in file_namespace.split('\\'):
             try:
                 last_map = last_map[ns_name]
             except KeyError:
-                raise KeyError(f"{name} not found in namespace {namespace}")
+                raise KeyError(f"{name} not found in namespace {file_namespace}")
             if name in last_map:
                 last_result = last_map[name]
                 last_ns = ns_ls
@@ -406,7 +464,7 @@ class FileNamespace:
             last_ns = ns_ls
 
         if last_result is None:
-            raise KeyError(f"{name} not found in namespace {namespace}")
+            raise KeyError(f"{name} not found in namespace {file_namespace}")
 
         if not ret_raw:
             last_result = last_result[".__file_namespace__"]
@@ -414,7 +472,17 @@ class FileNamespace:
         return last_result, '\\'.join(last_ns)
 
 
-def join_file_ns(path: str, *args):
+def join_file_ns(path: str, *args: str) -> str:
+    """
+    连接文件命名空间
+
+    :param path: 待连接的文件命名空间
+    :type path: str
+    :param args: 待连接的文件命名空间
+    :type args: str
+    :return: 连接后的文件命名空间
+    :rtype: str
+    """
     return path + '\\' + '\\'.join(args)
 
 
