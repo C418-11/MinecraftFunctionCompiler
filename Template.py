@@ -132,6 +132,12 @@ def register_func(func_for_compile: Callable[..., str]) -> Callable[[Callable_T]
         :type args: list | None
         :param kwargs: 函数关键字参数
         :type kwargs: dict | None
+        :param env: 运行环境
+        :type env: Environment
+        :param c_conf: 编译器配置
+        :type c_conf: CompilerConfiguration
+        :param g_conf: 全局配置
+        :type g_conf: GlobalConfiguration
         :param namespace: 调用者命名空间
         :type namespace: str
         :param file_namespace: 调用者文件命名空间
@@ -214,6 +220,12 @@ def init_template(name: str, env, c_conf, g_conf) -> None:
 
     :param name: 访问模板文件的路径
     :type name: str
+    :param env: 运行环境
+    :type env: Environment
+    :param c_conf: 编译器配置
+    :type c_conf: CompilerConfiguration
+    :param g_conf: 全局配置
+    :type g_conf: GlobalConfiguration
     :return: None
     :rtype: None
     """
@@ -280,6 +292,7 @@ __all__ = (
 
     "check_template",
     "init_template",
+    "call_template",
 
     "CommandResult",
 )

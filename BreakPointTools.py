@@ -8,6 +8,7 @@ import json
 import os
 import re
 import warnings
+from io import TextIOWrapper
 from typing import Callable
 from typing import TypeVar
 
@@ -79,6 +80,8 @@ def raiseBreakPoint(env, file_namespace: str, func: str | None, *func_args, **fu
     """
     抛出断点
 
+    :param env: 运行环境
+    :type env: Environment
     :param file_namespace: 抛出所在的文件命名空间
     :type file_namespace: str
     :param func: 断点处理函数注册名
@@ -111,6 +114,12 @@ def updateBreakPoint(env, c_conf, g_conf, file_namespace: str) -> str:
     """
     更新断点
 
+    :param env: 运行环境
+    :type env: Environment
+    :param c_conf: 编译器配置
+    :type c_conf: CompilerConfiguration
+    :param g_conf: 全局配置
+    :type g_conf: GlobalConfiguration
     :param file_namespace: 需要更新的文件命名空间
     :type file_namespace: str
     :return: 断点处理函数生成的命令
@@ -201,10 +210,11 @@ class SplitBreakPoint:
         self._last_char = '\n'
         self._comment_line_cache: str = ''
 
+        self._file_path = file_path
         self._writing_dir = os.path.dirname(file_path)
         self._writing_name = os.path.basename(file_path)
         self._pb_id: int = 1
-        self._open_file = open(file_path, mode='w', encoding=self._encoding)
+        self._open_file: TextIOWrapper | None = None
         self.closed: bool = False
 
         self._flag_pattern = re.compile(r"#\s*&+Flag:\s*([^&\s]+).*")
@@ -366,13 +376,17 @@ class SplitBreakPoint:
             self._open_file.close()
             self.closed = True
 
-    def __enter__(self):
+    def open(self) -> None:
         if self.closed:
             raise Exception("File is closed")
+        self._open_file = open(self._file_path, mode='w', encoding=self._encoding)
+
+    def __enter__(self):
+        self.open()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.closed = True
+        self.close()
         return self._open_file.__exit__(exc_type, exc_val, exc_tb)
 
 

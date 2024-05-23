@@ -168,7 +168,7 @@ def _sbp_breakpoint(func_path, level, *, name, objective):
 _BP_ID: int = 0
 
 
-def _tbreakpoint(*, file_namespace: str):
+def _tbreakpoint(*, env, file_namespace: str):
     global _BP_ID
 
     command = ''
@@ -186,7 +186,7 @@ def _tbreakpoint(*, file_namespace: str):
         name=breakpoint_id,
         objective=SB_TEMP
     ))
-    raiseBreakPoint(file_namespace, "breakpoint", name=breakpoint_id, objective=SB_TEMP)
+    raiseBreakPoint(env, file_namespace, "breakpoint", name=breakpoint_id, objective=SB_TEMP)
 
     return command
 

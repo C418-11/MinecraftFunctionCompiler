@@ -4,7 +4,9 @@ import ast
 import inspect
 import json
 import os
+import sys
 import time
+import traceback
 import warnings
 from collections import OrderedDict
 from itertools import zip_longest
@@ -20,11 +22,11 @@ from DebuggingTools import FORCE_COMMENT
 from NamespaceTools import FileNamespace
 from NamespaceTools import Namespace
 from NamespaceTools import join_file_ns
-from ParameterTypes import ABCParameterType
-from ParameterTypes import ArgType
-from ParameterTypes import DefaultArgType
-from ParameterTypes import UnnecessaryParameter
-# from ParameterTypes import func_args
+from ParameterTypes import parse_arguments
+from ParameterTypes import ABCParameter
+from ParameterTypes import ABCDefaultParameter
+from ParameterTypes import ABCKeyword
+from ParameterTypes import ABCVariableLengthParameter
 from ScoreboardTools import CHECK_SB
 from ScoreboardTools import SBCheckType
 from ScoreboardTools import SBCompareType
@@ -36,7 +38,8 @@ from ScoreboardTools import SB_OP
 from ScoreboardTools import SB_RESET
 from ScoreboardTools import gen_code
 from ScoreboardTools import init_name
-from Template import check_template, call_template
+from Template import check_template
+from Template import call_template
 from Template import init_template
 from Template import template_funcs
 
@@ -83,11 +86,14 @@ class CompileConfiguration:
             self,
             base_namespace: str,
             read_path: str,
-            save_path: str = "./.output"
+            save_path: str = "./.output",
+            *,
+            debug_mode: bool = False
     ):
         self.base_namespace = base_namespace
         self.READ_PATH = read_path
         self.SAVE_PATH: str = save_path
+        self.DEBUG_MODE = debug_mode
 
 
 class Environment:
@@ -103,7 +109,7 @@ class Environment:
         self.g_conf: GlobalConfiguration = g_conf
         self.namespace = Namespace(self.c_conf.base_namespace)
         self.file_namespace = FileNamespace()
-        self.func_args: dict[str, OrderedDict[str, ABCParameterType]] = {}
+        self.func_args: dict[str, OrderedDict[str, ABCParameter]] = {}
 
     def generate_code(self, node: Any, namespace: str, file_namespace: str) -> str:
 
@@ -127,7 +133,21 @@ class Environment:
         required_params = generator_info["params"] & set(params_data.keys())
         required_data = {k: params_data[k] for k in required_params}
 
-        result = code_generator(**required_data)
+        try:
+            result = code_generator(**required_data)
+        except CompileFailedException as err:
+            if not hasattr(node, "lineno"):
+                raise
+            c_traceback = _build_compile_traceback(self.c_conf, namespace, file_namespace, node)
+            err.add_traceback(c_traceback)
+            raise
+        except Exception as err:
+            new_exception = CompileFailedException(err)
+            if hasattr(node, "lineno"):
+                c_traceback = _build_compile_traceback(self.c_conf, namespace, file_namespace, node)
+                new_exception.add_traceback(c_traceback)
+            raise new_exception
+
         if result is None:
             result = ''
 
@@ -220,6 +240,153 @@ class Environment:
         )
 
 
+class CompileTraceback:
+    def __init__(self, source_file_path, lineno, end_lineno, col_offset, end_col_offset, namespace, file_namespace):
+        self.source_file_path = source_file_path
+        self.lineno = lineno
+        self.end_lineno = end_lineno
+        self.col_offset = col_offset
+        self.end_col_offset = end_col_offset
+
+        self.namespace = namespace
+        self.file_namespace = file_namespace
+
+        self.code_lines: list[str] = []
+        self.code_columns: list[str] = []
+
+    def init(self, env: Environment):
+        code_lines = ''
+        with open(self.source_file_path, mode='r', encoding=env.c_conf.Encoding) as f:
+            for i, line in enumerate(f, start=1):
+                if (i < self.lineno) or (i > self.end_lineno):
+                    continue
+                code_lines += line
+
+        self.code_lines = code_lines.split('\n')[:-1]
+        self.code_columns = code_lines[self.col_offset:self.end_col_offset].split('\n')
+
+
+def _file_namespace2source_file(c_conf: CompileConfiguration, file_namespace: str) -> str:
+    root_f_ns = file_namespace.split('\\', 1)[0]
+    source_file_path = os.path.join(c_conf.READ_PATH, root_f_ns)
+    source_file = f"{source_file_path}.py"
+    abs_source_file = os.path.abspath(source_file)
+    return abs_source_file
+
+
+def _build_compile_traceback(
+        c_conf: CompileConfiguration, namespace, file_namespace: str, node: Any) -> CompileTraceback:
+    source_file_path = _file_namespace2source_file(c_conf, file_namespace)
+    c_traceback = CompileTraceback(
+        source_file_path,
+
+        node.lineno,
+        node.end_lineno,
+        node.col_offset,
+        node.end_col_offset,
+
+        namespace,
+        file_namespace,
+    )
+    return c_traceback
+
+
+class CompileFailedException(Exception):
+    def __init__(self, raw_exc):
+        self._raw_exc = raw_exc
+        self.traceback: list[CompileTraceback] = []
+
+    @property
+    def raw_exc(self):
+        return self._raw_exc
+
+    def add_traceback(self, _traceback: CompileTraceback):
+        self.traceback.append(_traceback)
+
+
+class Compiler:
+    def __init__(self, environment: Environment):
+        self.env = environment
+        self.c_conf = environment.c_conf
+        self.g_conf = environment.g_conf
+        self._encoding = environment.c_conf.Encoding
+
+        self._last_start_time: float | None = None
+        self._last_end_time: float | None = None
+
+    def compile(self, source_file: str):
+        self._last_start_time = time.time()
+
+        with open(os.path.join(self.c_conf.READ_PATH, f"{source_file}.py"), mode='r', encoding=self._encoding) as _:
+            tree = ast.parse(_.read())
+
+        if self.c_conf.DEBUG_MODE:
+            print(ast.dump(tree, indent=4))
+            print()
+
+        compile_success: bool = False
+        try:
+            self.env.generate_code(tree, self.env.ns_join_base(source_file), source_file)
+            compile_success = True
+        except CompileFailedException as err:
+            # traceback.print_exception(err)
+            traceback.print_exception(err.raw_exc)
+            for tb in err.traceback:
+                tb.init(self.env)
+
+            print(file=sys.stderr)
+            print("CompileTraceback (most recent compile first):", file=sys.stderr)
+            for tb in err.traceback[::-1]:
+                print(
+                    f"  File \"{tb.source_file_path}\","
+                    f" line {tb.lineno},"
+                    f" ns \"{tb.namespace}\","
+                    f" file_ns \"{tb.file_namespace}\"",
+                    file=sys.stderr
+                )
+                for line in tb.code_lines:
+                    print(f"    {line}", file=sys.stderr)
+        self._last_end_time = time.time()
+        if self.c_conf.DEBUG_MODE and compile_success:
+            self.print_environment()
+
+    def print_environment(self):
+
+        print(f"[DEBUG] CompileTime={self._last_end_time - self._last_start_time}")
+        print()
+
+        def _debug_dump(v: dict):
+            return json.dumps(_deep_sorted(v), indent=4)
+
+        _func_args = OrderedDict()
+        for func_ns, args in self.env.func_args.items():
+            _func_args[func_ns] = OrderedDict()
+            for arg in args:
+                _func_args[func_ns][arg] = repr(args[arg])
+
+        _dumped_func_args = _debug_dump(_func_args)
+        print(f"[DEBUG] FunctionArguments={_dumped_func_args}")
+        print()
+        _template_func = OrderedDict()
+        for name, func in template_funcs.items():
+            _template_func[name] = repr(func)
+        _dumped_template_func = _debug_dump(_template_func)
+        print(f"[DEBUG] TemplateFunctions={_dumped_template_func}")
+        print()
+        _dumped_sb_name2code = _debug_dump(SB_Name2Code)
+        print(f"[DEBUG] SB_Name2Code={_dumped_sb_name2code}")
+        print()
+        _dumped_ns_map = _debug_dump(self.env.namespace.namespace_tree)
+        print(f"[DEBUG] NamespaceMap={_dumped_ns_map}")
+        print()
+        _dumped_temp_map = _debug_dump(self.env.namespace.temp_ns)
+        print(f"[DEBUG] TemplateScoreboardVariableMap={_dumped_temp_map}")
+        print()
+        _dumped_file_map = _debug_dump(self.env.file_namespace.namespace_tree)
+        print(f"[DEBUG] FileMap={_dumped_file_map}")
+        print()
+
+
 loaded_modules: dict[str, bool] = {}
 
 
@@ -272,14 +439,17 @@ def import_as(
             with open(sourcefile_path, mode='r', encoding="utf-8") as f:
                 tree = ast.parse(f.read())
 
-            print("------------导入文件-----------")
-            print(sourcefile_path)
-            print(ast.dump(tree, indent=4))
-            print("------------------------------")
+            if c_conf.DEBUG_MODE:
+                print("------------导入文件-----------")
+                print(sourcefile_path)
+                print(ast.dump(tree, indent=4))
+                print("------------------------------")
 
             env.generate_code(tree, new_namespace, name)
             end_t = time.time()
-            print(f"编译导入模块 {sourcefile_path}, 耗时{end_t - start_t}秒")
+
+            if c_conf.DEBUG_MODE:
+                print(f"编译导入模块 {sourcefile_path}, 耗时{end_t - start_t}秒")
 
             command += f"function {new_namespace}/.__module\n"
 
@@ -462,17 +632,14 @@ def gen_call(
         # 如果参数未提供值，且不是默认值，则报错
         # 否者，使用默认值
         if value is None:
-            if not isinstance(this_func_args[name], DefaultArgType):
+            argument = this_func_args[name]
+            if not isinstance(argument, ABCDefaultParameter):
                 raise SyntaxError(f"函数 {func_ns} 的参数 {name} 未提供值")
 
-            default_value = this_func_args[name].default
-
-            if isinstance(default_value, UnnecessaryParameter):
-                commands += COMMENT(f"Call:忽略参数", name=name)
-                continue
+            default_value = argument.default
 
             commands += COMMENT(f"Call:使用默认值", name=name, value=default_value)
-            value = ast.Constant(value=this_func_args[name].default)
+            value = ast.Constant(value=argument.default)
 
         commands += COMMENT("Call:计算参数值")
         commands += env.generate_code(value, namespace, file_namespace)
@@ -958,8 +1125,6 @@ def gen_arguments(
         env: Environment,
         g_conf: GlobalConfiguration,
         node: ast.arguments, namespace: str) -> str:
-    args = [arg.arg for arg in node.args]
-
     if namespace in env.func_args:
         warnings.warn(
             f"函数命名空间 {namespace} 已经存在, 可能覆盖之前的定义",
@@ -972,16 +1137,15 @@ def gen_arguments(
 
     command += COMMENT(f"arguments:处理参数")
 
+    arguments_dict = OrderedDict(((arg.name, arg) for arg in parse_arguments(node)))
     # 反转顺序以匹配默认值
-    for name, default in zip_longest(reversed(args), reversed(node.defaults), fillvalue=None):
-
-        if default is None:
-            args_dict[name] = ArgType(name)
-        elif isinstance(default, ast.Constant):
-            default_value = default.value
-            args_dict[name] = DefaultArgType(name, default_value)
-        else:
-            raise Exception("无法解析的默认值")
+    for name, argument in arguments_dict.items():
+        if isinstance(argument, ABCDefaultParameter):
+            raise Exception(f"函数参数 {name} 包含默认值, 暂时无法处理")
+        if isinstance(argument, ABCKeyword):
+            raise Exception(f"函数参数 {name} 包含关键字参数, 暂时无法处理")
+        if isinstance(argument, ABCVariableLengthParameter):
+            raise Exception(f"函数参数 {name} 包含*参数, 暂时无法处理")
 
         gen_code(f"{namespace}.{name}", g_conf.SB_ARGS)
         env.ns_setter(name, f"{namespace}.{name}", namespace, "variable")
@@ -1098,52 +1262,11 @@ def main():
     read_path = "./tests"
     file_name = "func_add"
 
-    compile_configuration = CompileConfiguration("source_code:", read_path, save_path)
+    compile_configuration = CompileConfiguration("source_code:", read_path, save_path, debug_mode=True)
     environment = Environment(compile_configuration)
 
-    start_t = time.time()
-    with open(os.path.join(compile_configuration.READ_PATH, f"{file_name}.py"), mode='r', encoding="utf-8") as _:
-        tree = ast.parse(_.read())
-
-    print(ast.dump(tree, indent=4))
-    print()
-
-    environment.generate_code(tree, environment.ns_join_base(file_name), file_name)
-    end_t = time.time()
-
-    print(f"[DEBUG] TimeUsed={end_t - start_t}")
-    print()
-
-    def _debug_dump(v: dict):
-        return json.dumps(_deep_sorted(v), indent=4)
-
-    _func_args = OrderedDict()
-    for func_ns, args in environment.func_args.items():
-        _func_args[func_ns] = OrderedDict()
-        for arg in args:
-            _func_args[func_ns][arg] = repr(args[arg])
-
-    _dumped_func_args = _debug_dump(_func_args)
-    print(f"[DEBUG] FunctionArguments={_dumped_func_args}")
-    print()
-    _template_func = OrderedDict()
-    for name, func in template_funcs.items():
-        _template_func[name] = repr(func)
-    _dumped_template_func = _debug_dump(_template_func)
-    print(f"[DEBUG] TemplateFunctions={_dumped_template_func}")
-    print()
-    _dumped_sb_name2code = _debug_dump(SB_Name2Code)
-    print(f"[DEBUG] SB_Name2Code={_dumped_sb_name2code}")
-    print()
-    _dumped_ns_map = _debug_dump(environment.namespace.namespace_tree)
-    print(f"[DEBUG] NamespaceMap={_dumped_ns_map}")
-    print()
-    _dumped_temp_map = _debug_dump(environment.namespace.temp_ns)
-    print(f"[DEBUG] TemplateScoreboardVariableMap={_dumped_temp_map}")
-    print()
-    _dumped_file_map = _debug_dump(environment.file_namespace.namespace_tree)
-    print(f"[DEBUG] FileMap={_dumped_file_map}")
-    print()
+    compiler = Compiler(environment)
+    compiler.compile(file_name)
 
 
 if __name__ == "__main__":
