@@ -20,7 +20,17 @@ from Template import template_funcs
 
 
 class Compiler:
-    def __init__(self, environment: Environment):
+    def __init__(self, environment: Environment) -> None:
+        """
+        初始化编译器
+
+        :param environment: 编译环境
+        :type environment: Environment
+        :return: None
+        :rtype: None
+
+        .. seealso:: Environment
+        """
         self.env = environment
         self.c_conf = environment.c_conf
         self.g_conf = environment.g_conf
@@ -30,6 +40,14 @@ class Compiler:
         self._last_end_time: float | None = None
 
     def compile(self, source_file: str):
+        """
+        编译源码文件
+
+        :param source_file: 源码文件名
+        :type source_file: str
+        :return: None
+        :rtype: None
+        """
         self._last_start_time = time.time()
 
         with open(os.path.join(self.c_conf.READ_PATH, f"{source_file}.py"), mode='r', encoding=self._encoding) as _:
@@ -64,7 +82,14 @@ class Compiler:
         if self.c_conf.DEBUG_MODE and compile_success:
             self.print_environment()
 
-    def print_environment(self):
+    def print_environment(self) -> None:
+        # noinspection GrazieInspection
+        """
+        打印环境信息
+
+        :return: None
+        :rtype: None
+        """
 
         print(f"[DEBUG] CompileTime={self._last_end_time - self._last_start_time}")
         print()
