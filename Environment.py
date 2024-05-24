@@ -49,6 +49,11 @@ class SBPWrapper(SplitBreakPoint):
 class Environment(ABCEnvironment):
     """
     编译环境
+
+    文档详见 ABCEnvironment
+
+    .. seealso::
+        :class:`ABC.ABCEnvironment`
     """
 
     def __init__(self, c_conf: CompileConfiguration, g_conf: GlobalConfiguration = None):

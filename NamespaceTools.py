@@ -17,6 +17,12 @@ from ScoreboardTools import SB_Name2Code
 
 
 class Namespace(ABCNamespace):
+    """
+    文档详见 ABCNamespace
+
+    .. seealso::
+        :class:`ABC.ABCNamespace`
+    """
     @override
     def split_base(self, namespace: str) -> tuple[str, str]:
         if namespace.startswith(self._base_ns):
@@ -235,6 +241,12 @@ class Namespace(ABCNamespace):
 
 
 class FileNamespace(ABCFileNamespace):
+    """
+    文档详见 ABCFileNamespace
+
+    .. seealso::
+        :class:`ABC.ABCFileNamespace`
+    """
 
     def init_root(self, file_namespace: str, level: str | None, file_ns_type: str, ns: str) -> None:
         self.namespace_tree[file_namespace] = OrderedDict({
