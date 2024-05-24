@@ -6,26 +6,23 @@
 """
 
 import json
+from typing import Any
 
 from ABC import ABCEnvironment
 from BreakPointTools import BreakPointFlag
 from BreakPointTools import raiseBreakPoint
 from BreakPointTools import register_processor
-from Constant import Flags
 from Constant import RawJsons
-from Constant import ScoreBoards
-from DebuggingTools import COMMENT
 from DebuggingTools import FORCE_COMMENT
 from ScoreboardTools import CHECK_SB
 from ScoreboardTools import SBCheckType
 from ScoreboardTools import SBCompareType
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_RESET
+from Configuration import GlobalConfiguration
 from Template import ArgData
 from Template import register_func
 
-SB_TEMP = ScoreBoards.Temp
-SB_FLAGS = ScoreBoards.Flags
 
 print_end: bool = True
 
@@ -114,7 +111,14 @@ def tprint(*objects, sep: str = ' ', end: str = '\n') -> None:
 
 
 @register_processor("breakpoint")
-def _sbp_breakpoint(func_path, level, *, name, objective):
+def _sbp_breakpoint(
+        func_path: str,
+        level: Any,
+        g_conf: GlobalConfiguration,
+        env: ABCEnvironment,
+        name: str,
+        objective: str
+):
     def _process_raise():
         command = ''
         keep_raise = True
@@ -124,7 +128,7 @@ def _sbp_breakpoint(func_path, level, *, name, objective):
             objective=objective
         ))
         if level == "module":
-            command += COMMENT("BP:breakpoint.Reset")
+            command += env.COMMENT("BP:breakpoint.Reset")
             command += SB_RESET(name, objective)
             keep_raise = False
 
@@ -132,9 +136,14 @@ def _sbp_breakpoint(func_path, level, *, name, objective):
 
     def _process_split():
         command = ''
-        command += COMMENT("BP:breakpoint.Split")
-        command += CHECK_SB(SBCheckType.UNLESS, name, objective, SBCompareType.EQUAL, Flags.TRUE, SB_FLAGS,
-                            f"function {func_path}")
+        command += env.COMMENT("BP:breakpoint.Split")
+        command += CHECK_SB(
+            SBCheckType.UNLESS,
+            name, objective,
+            SBCompareType.EQUAL,
+            g_conf.Flags.TRUE, g_conf.SB_FLAGS,
+            f"function {func_path}"
+        )
         continue_json = {
             "text": '',
             "extra": [
@@ -166,23 +175,23 @@ def _sbp_breakpoint(func_path, level, *, name, objective):
         return _process_split()
 
 
-def _tbreakpoint(*, env: ABCEnvironment, file_namespace: str):
+def _tbreakpoint(*, g_conf: GlobalConfiguration, env: ABCEnvironment, file_namespace: str):
 
     command = ''
 
     breakpoint_id = f"BreakPoint:{file_namespace}\\{env.newID("tbreakpoint")}"
 
-    command += COMMENT("BP:breakpoint.Enable")
+    command += env.COMMENT("BP:breakpoint.Enable")
     command += SB_ASSIGN(
-        breakpoint_id, SB_TEMP,
-        Flags.TRUE, SB_FLAGS
+        breakpoint_id, g_conf.SB_TEMP,
+        g_conf.Flags.TRUE, g_conf.SB_FLAGS
     )
     command += FORCE_COMMENT(BreakPointFlag(
         "breakpoint",
         name=breakpoint_id,
-        objective=SB_TEMP
+        objective=g_conf.SB_TEMP
     ))
-    raiseBreakPoint(env, file_namespace, "breakpoint", name=breakpoint_id, objective=SB_TEMP)
+    raiseBreakPoint(env, file_namespace, "breakpoint", name=breakpoint_id, objective=g_conf.SB_TEMP)
 
     return command
 

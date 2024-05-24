@@ -8,14 +8,10 @@ import ast
 import functools
 import importlib
 import inspect
-import sys
-import traceback
 from typing import Any
 from typing import Callable
 from typing import TypeVar
 
-from Constant import ScoreBoards
-from DebuggingTools import COMMENT
 from ABC import ABCEnvironment
 from Configuration import CompileConfiguration
 from Configuration import GlobalConfiguration
@@ -95,7 +91,7 @@ class ArgData:
         return f"{type(self).__name__}({self.name=}, {self.objective=})"
 
 
-def _parse_node(node: Any, namespace: str):
+def _parse_node(g_conf: GlobalConfiguration, node: Any, namespace: str):
     """
     尝试把AST节点转换成包含NameNode的python类型
 
@@ -109,11 +105,11 @@ def _parse_node(node: Any, namespace: str):
     if isinstance(node, ast.Constant):
         return node.value
     if isinstance(node, ast.Name):
-        return ArgData(f"{namespace}.{node.id}", ScoreBoards.Vars)
+        return ArgData(f"{namespace}.{node.id}", g_conf.SB_VARS)
     if isinstance(node, ast.Dict):
         dict_result = {}
         for key, value in zip(node.keys, node.values, strict=True):
-            dict_result[_parse_node(key, namespace)] = _parse_node(value, namespace)
+            dict_result[_parse_node(g_conf, key, namespace)] = _parse_node(g_conf, value, namespace)
         return dict_result
     return node
 
@@ -248,13 +244,20 @@ def init_template(name: str, env: ABCEnvironment, c_conf: CompileConfiguration, 
     :rtype: None
     """
     module = importlib.import_module(name)
-    try:
-        module.init(env, c_conf, g_conf)
-    except AttributeError:
-        pass
-    except Exception as err:
-        traceback.print_exception(err)
-        print(f"Template:模板 {name} 初始化失败", file=sys.stderr)
+
+    if not hasattr(module, "init"):
+        return None
+
+    data = {
+        "env": env,
+        "c_conf": c_conf,
+        "g_conf": g_conf
+    }
+
+    parameter_set = set(inspect.signature(module.init).parameters.keys())
+    required_parameters = parameter_set & set(data.keys())
+
+    module.init(**{k: data[k] for k in required_parameters})
 
 
 def call_template(
@@ -287,20 +290,20 @@ def call_template(
     """
     func = template_funcs[template_func_name]
     commands = ''
-    commands += COMMENT(f"Template.Call:调用模板函数", func=template_func_name)
+    commands += env.COMMENT(f"Template.Call:调用模板函数", func=template_func_name)
 
     args = []
     kwargs = {}
 
     def _parse(value_node: Any) -> tuple[str, ArgData]:
         if type(value_node) in {ast.Constant, ast.Dict, ast.Name}:
-            return '', _parse_node(value_node, namespace)
+            return '', _parse_node(g_conf, value_node, namespace)
         if type(value_node) not in env.code_generators:
-            return '', _parse_node(value_node, namespace)
-        cmd = COMMENT("Template.Call:计算参数值")
+            return '', _parse_node(g_conf, value_node, namespace)
+        cmd = env.COMMENT("Template.Call:计算参数值")
         cmd += env.generate_code(value_node, namespace, file_namespace)
 
-        cmd += COMMENT("Template.Call:传递参数")
+        cmd += env.COMMENT("Template.Call:传递参数")
         process_id = env.newID("Template.Call.Arg")
         arg_ext = f".*TemplateCallArg{process_id}"
         cmd += SB_ASSIGN(
@@ -330,7 +333,7 @@ def call_template(
         env=env, c_conf=c_conf, g_conf=g_conf,
         namespace=namespace, file_namespace=file_namespace
     )
-    commands += COMMENT(f"Template.Call:调用模版函数结束")
+    commands += env.COMMENT(f"Template.Call:调用模版函数结束")
     for arg in args:
         if not isinstance(arg, ArgData):
             continue

@@ -19,7 +19,6 @@ from BreakPointTools import BreakPointFlag
 from Configuration import CompileConfiguration
 from Configuration import GlobalConfiguration
 from DebuggingTools import FORCE_COMMENT
-from DebuggingTools import COMMENT
 from ABC import ABCEnvironment
 from NamespaceTools import join_file_ns
 from ParameterTypes import ABCDefaultParameter
@@ -130,11 +129,14 @@ def import_as(
 
 @register_processor("return")
 def sbp_return(
+        env: ABCEnvironment,
         g_conf: GlobalConfiguration,
         func_path: str, level: str, name: str, objective: str) -> tuple[str, bool] | str:
     """
     处理return语句的断点
 
+    :param env: 运行环境
+    :type env: ABCEnvironment
     :param g_conf: 全局配置
     :type g_conf: GlobalConfiguration
     :param func_path: 断点切断后恢复执行需要调用的函数
@@ -153,7 +155,7 @@ def sbp_return(
         command = ''
         keep_raise: bool = True
         if level in ["module", "function"]:
-            command += COMMENT("BP:Return.Reset")
+            command += env.COMMENT("BP:Return.Reset")
             command += SB_RESET(name, objective)
             keep_raise = False
         else:
@@ -166,7 +168,7 @@ def sbp_return(
 
     def _process_split() -> str:
         command = ''
-        command += COMMENT("BP:Return.Split")
+        command += env.COMMENT("BP:Return.Split")
         command += CHECK_SB(
             SBCheckType.UNLESS,
             name, objective,
@@ -195,7 +197,7 @@ def register_default_gen(node_type):
     return decorator
 
 
-@register_default_gen(None)
+@register_default_gen(type(None))
 def gen_none(g_conf: GlobalConfiguration, namespace: str) -> str:
     return SB_ASSIGN(
         f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP,
@@ -236,7 +238,6 @@ def gen_module(
 
     # 生成并写入
     with env.writeable_file_namespace(join_file_ns(file_namespace, "module.mcfunction"), namespace) as f:
-        f.write('\n')
         for statement in node.body:
             c = env.generate_code(statement, f"{namespace}\\module", join_file_ns(file_namespace, "module"))
             f.write(c)
@@ -249,7 +250,7 @@ def gen_module(
 def gen_name(env: ABCEnvironment, g_conf: GlobalConfiguration, node: ast.Name, namespace: str) -> str:
     assert isinstance(node.ctx, ast.Load)
     command = ''
-    command += COMMENT(f"Name:读取变量", name=node.id)
+    command += env.COMMENT(f"Name:读取变量", name=node.id)
     target_ns = env.ns_getter(node.id, namespace)[0]
     command += SB_ASSIGN(
         f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP,
@@ -269,7 +270,7 @@ def gen_call(
         func_name, func_ns, ns = env.ns_from_node(node.func, namespace, not_exists_ok=True, ns_type="function")
 
     commands: str = ''
-    commands += COMMENT(f"Call:调用函数")
+    commands += env.COMMENT(f"Call:调用函数")
 
     # 如果是模版函数，则调用模版函数
     template_func_name = f"{ns.split(':', maxsplit=1)[1]}.{func_name}"
@@ -296,13 +297,13 @@ def gen_call(
 
             default_value = argument.default
 
-            commands += COMMENT(f"Call:使用默认值", name=name, value=default_value)
+            commands += env.COMMENT(f"Call:使用默认值", name=name, value=default_value)
             value = ast.Constant(value=argument.default)
 
-        commands += COMMENT("Call:计算参数值")
+        commands += env.COMMENT("Call:计算参数值")
         commands += env.generate_code(value, namespace, file_namespace)
 
-        commands += COMMENT("Call:传递参数", name=name)
+        commands += env.COMMENT("Call:传递参数", name=name)
         commands += SB_ASSIGN(
             f"{func_ns}.{name}", g_conf.SB_ARGS,
             f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP
@@ -337,7 +338,9 @@ def gen_call(
 
 
 @register_default_gen(ast.Constant)
-def gen_constant(g_conf: GlobalConfiguration, node: ast.Constant, namespace: str) -> str:
+def gen_constant(
+        env: ABCEnvironment,
+        g_conf: GlobalConfiguration, node: ast.Constant, namespace: str) -> str:
     value = node.value
 
     if type(value) is bool:
@@ -347,7 +350,7 @@ def gen_constant(g_conf: GlobalConfiguration, node: ast.Constant, namespace: str
         raise Exception(f"无法解析的常量 {node.value}")
 
     command = ''
-    command += COMMENT(f"Constant:读取常量", value=value)
+    command += env.COMMENT(f"Constant:读取常量", value=value)
     command += SB_CONSTANT(f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP, value)
 
     return command
@@ -363,7 +366,7 @@ def gen_attribute(env: ABCEnvironment, g_conf: GlobalConfiguration, node: ast.At
     attr_namespace = env.ns_getter(node.attr, base_namespace)[0]
 
     command = ''
-    command += COMMENT(f"Attribute:读取属性", base_ns=base_namespace, attr=node.attr)
+    command += env.COMMENT(f"Attribute:读取属性", base_ns=base_namespace, attr=node.attr)
 
     command += SB_ASSIGN(
         f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP,
@@ -389,7 +392,7 @@ def gen_expr(
             UserWarning
         )
     else:
-        command += COMMENT(f"Expr:清除表达式返回值")
+        command += env.COMMENT(f"Expr:清除表达式返回值")
         command += cmd
     return command
 
@@ -399,9 +402,9 @@ def gen_bin_op(
         env: ABCEnvironment,
         g_conf: GlobalConfiguration, node: ast.BinOp, namespace: str, file_namespace: str) -> str:
     command = ''
-    command += COMMENT(f"BinOp:二进制运算", op=type(node.op).__name__)
+    command += env.COMMENT(f"BinOp:二进制运算", op=type(node.op).__name__)
 
-    command += COMMENT(f"BinOp:处理左值")
+    command += env.COMMENT(f"BinOp:处理左值")
     command += env.generate_code(node.left, namespace, file_namespace)
 
     process_uid = env.newID("process")
@@ -415,7 +418,7 @@ def gen_bin_op(
     env.temp_ns_append(namespace, f"{namespace}{process_ext}")
     command += SB_RESET(f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP)
 
-    command += COMMENT(f"BinOp:处理右值")
+    command += env.COMMENT(f"BinOp:处理右值")
     command += env.generate_code(node.right, namespace, file_namespace)
 
     if isinstance(node.op, ast.Add):
@@ -447,7 +450,7 @@ def gen_bin_op(
 
     command += SB_RESET(f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP)
 
-    command += COMMENT(f"BinOp:传递结果")
+    command += env.COMMENT(f"BinOp:传递结果")
     command += SB_ASSIGN(
         f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP,
         f"{namespace}{process_ext}", g_conf.SB_TEMP
@@ -470,7 +473,7 @@ def gen_assign(
 
         target_namespace = f"{root_ns}.{name}"
 
-        command += COMMENT(f"Assign:将结果赋值给变量", name=name)
+        command += env.COMMENT(f"Assign:将结果赋值给变量", name=name)
         env.ns_setter(name, target_namespace, namespace, "variable")
         command += SB_ASSIGN(
             target_namespace, g_conf.SB_VARS,
@@ -548,10 +551,10 @@ def gne_func_def(
         env.ns_setter(node.name, f"{namespace}\\{node.name}", namespace, "function")
         env.temp_ns_init(f"{namespace}\\{node.name}")
 
-        f.write(COMMENT(f"FunctionDef:函数头"))
+        f.write(env.COMMENT(f"FunctionDef:函数头"))
         args = env.generate_code(node.args, f"{namespace}\\{node.name}", new_file_ns)
         f.write(args)
-        f.write(COMMENT(f"FunctionDef:函数体"))
+        f.write(env.COMMENT(f"FunctionDef:函数体"))
         for statement in node.body:
             body = env.generate_code(statement, f"{namespace}\\{node.name}", new_file_ns)
             f.write(body)
@@ -621,7 +624,7 @@ def gen_if(
 
     command += env.generate_code(node.test, namespace, file_namespace)
 
-    command += COMMENT(f"IF:检查条件")
+    command += env.COMMENT(f"IF:检查条件")
     command += CHECK_SB(
         SBCheckType.UNLESS,
         f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP,
@@ -648,11 +651,11 @@ def gen_return(
         g_conf: GlobalConfiguration,
         node: ast.Return, namespace: str, file_namespace: str) -> str:
     command = ''
-    command += COMMENT("Return:计算返回值")
+    command += env.COMMENT("Return:计算返回值")
 
     command += env.generate_code(node.value, namespace, file_namespace)
 
-    command += COMMENT("Return:保存返回值")
+    command += env.COMMENT("Return:保存返回值")
 
     ns, name = namespace.rsplit('\\', 1)
     func_map: dict = env.ns_getter(name, ns, ret_raw=True)[0]
@@ -668,7 +671,7 @@ def gen_return(
 
     command += SB_RESET(f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP)
 
-    command += COMMENT("BP:Return.Enable")
+    command += env.COMMENT("BP:Return.Enable")
     breakpoint_id = f"breakpoint_return_{env.newID("return.breakpoint")}"
     command += SB_ASSIGN(
         f"{breakpoint_id}", g_conf.SB_TEMP,
@@ -691,11 +694,11 @@ def gen_compare(
         g_conf: GlobalConfiguration,
         node: ast.Compare, namespace: str, file_namespace: str) -> str:
     command = ''
-    command += COMMENT(f"Compare:比较操作", **{
+    command += env.COMMENT(f"Compare:比较操作", **{
         f"op{i}": type(cmp).__name__ for i, cmp in enumerate(node.comparators)
     })
 
-    command += COMMENT(f"Compare:处理左值")
+    command += env.COMMENT(f"Compare:处理左值")
     command += env.generate_code(node.left, namespace, file_namespace)
 
     command += SB_ASSIGN(
@@ -714,37 +717,37 @@ def gen_compare(
     )
 
     for i, op in enumerate(node.ops):
-        command += COMMENT(f"Compare:提取左值")
+        command += env.COMMENT(f"Compare:提取左值")
         command += SB_ASSIGN(
             f"{namespace}.*CompareCalculate", g_conf.SB_TEMP,
             f"{namespace}.*CompareLeft", g_conf.SB_TEMP
         )
 
-        command += COMMENT(f"Compare:处理右值")
+        command += env.COMMENT(f"Compare:处理右值")
         command += env.generate_code(node.comparators[i], namespace, file_namespace)
 
         if isinstance(op, ast.Eq):
-            command += COMMENT(f"Compare:比较", op="Eq(==)")
+            command += env.COMMENT(f"Compare:比较", op="Eq(==)")
             check_type = SBCheckType.IF
             check_op = SBCompareType.EQUAL
         elif isinstance(op, ast.NotEq):
-            command += COMMENT(f"Compare:比较", op="NotEq(!=)")
+            command += env.COMMENT(f"Compare:比较", op="NotEq(!=)")
             check_type = SBCheckType.UNLESS
             check_op = SBCompareType.EQUAL
         elif isinstance(op, ast.Gt):
-            command += COMMENT(f"Compare:比较", op="Gt(>)")
+            command += env.COMMENT(f"Compare:比较", op="Gt(>)")
             check_type = SBCheckType.IF
             check_op = SBCompareType.MORE
         elif isinstance(op, ast.Lt):
-            command += COMMENT(f"Compare:比较", op="Lt(<)")
+            command += env.COMMENT(f"Compare:比较", op="Lt(<)")
             check_type = SBCheckType.IF
             check_op = SBCompareType.LESS
         elif isinstance(op, ast.GtE):
-            command += COMMENT(f"Compare:比较", op="GtE(>=)")
+            command += env.COMMENT(f"Compare:比较", op="GtE(>=)")
             check_type = SBCheckType.IF
             check_op = SBCompareType.MORE_EQUAL
         elif isinstance(op, ast.LtE):
-            command += COMMENT(f"Compare:比较", op="LtE(<=)")
+            command += env.COMMENT(f"Compare:比较", op="LtE(<=)")
             check_type = SBCheckType.IF
             check_op = SBCompareType.LESS_EQUAL
         else:
@@ -762,13 +765,13 @@ def gen_compare(
             )
         )
 
-        command += COMMENT(f"Compare:重置计算临时变量")
+        command += env.COMMENT(f"Compare:重置计算临时变量")
         command += SB_RESET(f"{namespace}.*CompareCalculate", g_conf.SB_TEMP)
 
-    command += COMMENT(f"Compare:重置左值")
+    command += env.COMMENT(f"Compare:重置左值")
     command += SB_RESET(f"{namespace}.*CompareLeft", g_conf.SB_TEMP)
 
-    command += COMMENT(f"Compare:传递结果")
+    command += env.COMMENT(f"Compare:传递结果")
     command += SB_ASSIGN(
         f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP,
         f"{namespace}.*CompareResult", g_conf.SB_TEMP
@@ -793,7 +796,7 @@ def gen_arguments(
 
     command = ''
 
-    command += COMMENT(f"arguments:处理参数")
+    command += env.COMMENT(f"arguments:处理参数")
 
     arguments_dict = OrderedDict(((arg.name, arg) for arg in parse_arguments(node)))
     # 反转顺序以匹配默认值
@@ -826,11 +829,11 @@ def gen_unary_op(
         node: ast.UnaryOp, namespace: str, file_namespace: str) -> str:
     command = ''
 
-    command += COMMENT(f"UnaryOp:一元操作", op=type(node.op).__name__)
+    command += env.COMMENT(f"UnaryOp:一元操作", op=type(node.op).__name__)
     command += env.generate_code(node.operand, namespace, file_namespace)
 
     if isinstance(node.op, ast.Not):
-        command += COMMENT(f"UnaryOp:运算", op="Not(not)")
+        command += env.COMMENT(f"UnaryOp:运算", op="Not(not)")
         command += CHECK_SB(
             SBCheckType.UNLESS,
             f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP,
@@ -856,7 +859,7 @@ def gen_unary_op(
         )
 
     elif isinstance(node.op, ast.USub):
-        command += COMMENT(f"UnaryOp:运算", op="USub(-)")
+        command += env.COMMENT(f"UnaryOp:运算", op="USub(-)")
         command += SB_ASSIGN(
             f"{namespace}.*UnaryOp", g_conf.SB_TEMP,
             f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP
@@ -871,7 +874,7 @@ def gen_unary_op(
 
     command += SB_RESET(f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP)
 
-    command += COMMENT(f"UnaryOp:传递结果")
+    command += env.COMMENT(f"UnaryOp:传递结果")
     command += SB_ASSIGN(
         f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP,
         f"{namespace}.*UnaryOp", g_conf.SB_TEMP

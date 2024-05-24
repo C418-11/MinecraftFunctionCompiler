@@ -5,27 +5,32 @@
 对计分板操作的支持
 """
 
-from Constant import Flags
-from Constant import ResultExt
-from Constant import ScoreBoards
+
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_CONSTANT
 from ScoreboardTools import init_name
 from Template import ArgData
 from Template import register_func
+from Configuration import GlobalConfiguration
 
-SB_MAP: dict[str, dict[str, int]] = {
-    ScoreBoards.Flags: {
-        Flags.TRUE: 1,
-        Flags.FALSE: 0,
 
-        Flags.DEBUG: 0,
-        Flags.NEG: -1,
-    },
-    ScoreBoards.Vars: {},
-    ScoreBoards.Args: {},
-    ScoreBoards.Temp: {},
-}
+SB_MAP: dict[str, dict[str, int]] = {}
+
+
+def init(g_conf: GlobalConfiguration):
+    global SB_MAP
+    SB_MAP = {
+        g_conf.SB_FLAGS: {
+            g_conf.Flags.TRUE: 1,
+            g_conf.Flags.FALSE: 0,
+
+            g_conf.Flags.DEBUG: 0,
+            g_conf.Flags.NEG: -1,
+        },
+        g_conf.SB_VARS: {},
+        g_conf.SB_ARGS: {},
+        g_conf.SB_TEMP: {},
+    }
 
 
 def _get_default(self: dict, key: str, default):
@@ -35,7 +40,7 @@ def _get_default(self: dict, key: str, default):
         return default
 
 
-def _get_score(name: str, objective: str, *, namespace: str = None):
+def _get_score(name: str, objective: str, *, g_conf: GlobalConfiguration, namespace: str = None):
     if namespace is None:
         raise ValueError("namespace is None")
 
@@ -43,7 +48,7 @@ def _get_score(name: str, objective: str, *, namespace: str = None):
 
     init_name(name, objective)
     command += SB_ASSIGN(
-        f"{namespace}{ResultExt}", ScoreBoards.Temp,
+        f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP,
         name, objective
     )
 
@@ -61,14 +66,14 @@ def get_score(name: str, objective: str):
     return _get_default(SB_MAP[objective], name, 0)
 
 
-def _write_score(name: str, objective: str, value: int, *, namespace: str):
+def _write_score(name: str, objective: str, value: int, *, g_conf: GlobalConfiguration, namespace: str):
     command = ''
 
     if isinstance(value, ArgData):
-        command += value.toResult(f"{namespace}{ResultExt}", ScoreBoards.Temp)
+        command += value.toResult(f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP)
     elif isinstance(value, int):
         command += SB_CONSTANT(
-            f"{namespace}{ResultExt}", ScoreBoards.Temp,
+            f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP,
             value
         )
     else:
@@ -77,7 +82,7 @@ def _write_score(name: str, objective: str, value: int, *, namespace: str):
     init_name(name, objective)
     command += SB_ASSIGN(
         name, objective,
-        f"{namespace}{ResultExt}", ScoreBoards.Temp
+        f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP
     )
 
     return command

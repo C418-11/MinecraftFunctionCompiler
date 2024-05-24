@@ -6,12 +6,11 @@
 """
 import json
 
-from Constant import DECIMAL_PRECISION
-from Constant import ScoreBoards
 from MinecraftColorString import ColorString
 from Template import CommandResult
 from Template import ArgData
 from Template import register_func
+from Configuration import GlobalConfiguration
 
 BossBar_Map = {}
 
@@ -121,9 +120,9 @@ def get_players(_id: str):
         return CommandResult(success=False)
 
 
-def _CheckValue(value: int | float):
+def _CheckValue(decimal_precision: int, value: int | float):
     if isinstance(value, float):
-        value = int(value * (10 ** DECIMAL_PRECISION))
+        value = int(value * (10 ** decimal_precision))
 
     if not isinstance(value, int):
         raise TypeError("value must be int or float")
@@ -134,17 +133,17 @@ def _CheckValue(value: int | float):
     return value
 
 
-def _set_value(_id: str, value: int | float | ArgData):
+def _set_value(g_conf: GlobalConfiguration, _id: str, value: int | float | ArgData):
     _id = _CheckId(_id)
 
     if isinstance(value, ArgData):
         command = (
             f"execute store result bossbar {_id} value "
-            f"run scoreboard players get {value.code} {ScoreBoards.Vars}\n"
+            f"run scoreboard players get {value.code} {g_conf.SB_VARS}\n"
         )
         return command
 
-    value = _CheckValue(value)
+    value = _CheckValue(g_conf.DECIMAL_PRECISION, value)
 
     return f"bossbar set {_id} value {value}\n"
 
@@ -152,7 +151,6 @@ def _set_value(_id: str, value: int | float | ArgData):
 @register_func(_set_value)
 def set_value(_id: str, value: int | float):
     _id = _CheckId(_id)
-    value = _CheckValue(value)
 
     try:
         if BossBar_Map[_id]["value"] == value:
@@ -180,17 +178,17 @@ def get_value(_id: str):
         return CommandResult(success=False)
 
 
-def _set_max(_id: str, _max: int | float | ArgData):
+def _set_max(g_conf: GlobalConfiguration, _id: str, _max: int | float | ArgData):
     _id = _CheckId(_id)
 
     if isinstance(_max, ArgData):
         command = (
             f"execute store result bossbar {_id} max "
-            f"run scoreboard players get {_max.code} {ScoreBoards.Vars}\n"
+            f"run scoreboard players get {_max.code} {g_conf.SB_VARS}\n"
         )
         return command
 
-    _max = _CheckValue(_max)
+    _max = _CheckValue(g_conf.DECIMAL_PRECISION, _max)
 
     return f"bossbar set {_id} max {_max}\n"
 
@@ -198,7 +196,6 @@ def _set_max(_id: str, _max: int | float | ArgData):
 @register_func(_set_max)
 def set_max(_id: str, _max: int | float):
     _id = _CheckId(_id)
-    _max = _CheckValue(_max)
 
     try:
         if BossBar_Map[_id]["max"] == _max:

@@ -250,19 +250,19 @@ class SplitBreakPoint:
         self._args_pattern = re.compile(r".*&args=(\[[^&]*]).*")
         self._kwargs_pattern = re.compile(r".*&kwargs=({[^&]*}).*")
 
-    def _parse_comment(self, text: str) -> None:
+    def _parse_comment(self, text: str) -> bool:
         """
         解析注释 在断点标记处分割MCF
 
         :param text: 需要解析的注释文本
         :type text: str
-        :return: None
-        :rtype: None
+        :return: 是否分割了MCF
+        :rtype: bool
         """
         matches = self._flag_pattern.findall(text)
         if not matches or matches[0] != "BreakPoint":
             self._write2file(text)
-            return
+            return False
 
         name, ext = os.path.splitext(self._writing_name)
         id_name = f"{name}-{hex(self._pb_id)[2:]}"
@@ -310,6 +310,8 @@ class SplitBreakPoint:
         self._pb_id += 1
         self._open_file.close()
         self._open_file = open(os.path.join(self._writing_dir, writing_name), mode='w', encoding='utf-8')
+
+        return True
 
     def write(self, text: str) -> None:
         """
