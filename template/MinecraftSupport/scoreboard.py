@@ -11,7 +11,7 @@ from Constant import ScoreBoards
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_CONSTANT
 from ScoreboardTools import init_name
-from Template import NameNode
+from Template import ArgData
 from Template import register_func
 
 SB_MAP: dict[str, dict[str, int]] = {
@@ -64,15 +64,15 @@ def get_score(name: str, objective: str):
 def _write_score(name: str, objective: str, value: int, *, namespace: str):
     command = ''
 
-    if isinstance(value, NameNode):
-        command += value.toResult()
+    if isinstance(value, ArgData):
+        command += value.toResult(f"{namespace}{ResultExt}", ScoreBoards.Temp)
     elif isinstance(value, int):
         command += SB_CONSTANT(
             f"{namespace}{ResultExt}", ScoreBoards.Temp,
             value
         )
     else:
-        raise TypeError("value must be NameNode or int")
+        raise TypeError("value must be ArgData or int")
 
     init_name(name, objective)
     command += SB_ASSIGN(

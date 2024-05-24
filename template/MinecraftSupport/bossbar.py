@@ -10,7 +10,7 @@ from Constant import DECIMAL_PRECISION
 from Constant import ScoreBoards
 from MinecraftColorString import ColorString
 from Template import CommandResult
-from Template import NameNode
+from Template import ArgData
 from Template import register_func
 
 BossBar_Map = {}
@@ -134,10 +134,10 @@ def _CheckValue(value: int | float):
     return value
 
 
-def _set_value(_id: str, value: int | float | NameNode):
+def _set_value(_id: str, value: int | float | ArgData):
     _id = _CheckId(_id)
 
-    if isinstance(value, NameNode):
+    if isinstance(value, ArgData):
         command = (
             f"execute store result bossbar {_id} value "
             f"run scoreboard players get {value.code} {ScoreBoards.Vars}\n"
@@ -180,10 +180,10 @@ def get_value(_id: str):
         return CommandResult(success=False)
 
 
-def _set_max(_id: str, _max: int | float | NameNode):
+def _set_max(_id: str, _max: int | float | ArgData):
     _id = _CheckId(_id)
 
-    if isinstance(_max, NameNode):
+    if isinstance(_max, ArgData):
         command = (
             f"execute store result bossbar {_id} max "
             f"run scoreboard players get {_max.code} {ScoreBoards.Vars}\n"

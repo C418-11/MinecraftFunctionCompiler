@@ -14,36 +14,36 @@ from typing import Any
 from typing import Callable
 from typing import TypeVar
 
-from Constant import ResultExt
 from Constant import ScoreBoards
 from DebuggingTools import COMMENT
 from ABC import ABCEnvironment
 from Configuration import CompileConfiguration
 from Configuration import GlobalConfiguration
 from ScoreboardTools import SB_ASSIGN
+from ScoreboardTools import SB_RESET
 from ScoreboardTools import SB_Name2Code
 
 template_funcs = {}
 
 
-class NameNode:
+class ArgData:
     """
     用于传参指定计分目标
     """
 
-    def __init__(self, name: str, *, namespace: str) -> None:
+    def __init__(self, name: str, objective: str) -> None:
         """
         初始化
 
         :param name: 计分目标名称
         :type name: str
-        :param namespace: 调用者命名空间
-        :type namespace: str
+        :param objective: 计分目标对象
+        :type objective: str
         :return: None
         :rtype: None
         """
         self.name: str = name
-        self.namespace: str = namespace
+        self.objective: str = objective
 
     @property
     def code(self) -> str:
@@ -53,18 +53,22 @@ class NameNode:
         :return: 计分目标编码结果
         :rtype: str
         """
-        return SB_Name2Code[ScoreBoards.Vars][f"{self.namespace}.{self.name}"]
+        return SB_Name2Code[self.objective][self.name]
 
-    def toResult(self) -> str:
+    def toResult(self, name: str, objective: str) -> str:
         """
-        生成将计分目标赋值给 {namespace}{ResultExt} 的指令
+        生成将计分目标赋值给 name, objective 的指令
 
+        :param name: 计分目标名称
+        :type name: str
+        :param objective: 计分目标对象
+        :type objective: str
         :return: 生成的指令
         :rtype: str
         """
         return SB_ASSIGN(
-            f"{self.namespace}{ResultExt}", ScoreBoards.Temp,
-            f"{self.namespace}.{self.name}", ScoreBoards.Vars
+            name, objective,
+            self.name, self.objective
         )
 
     def toJson(self) -> dict:
@@ -74,10 +78,21 @@ class NameNode:
         :return: 生成的JSON文本
         :rtype: dict
         """
-        return {"score": {"name": f"{self.code}", "objective": ScoreBoards.Vars}}
+        return {"score": {"name": f"{self.code}", "objective": self.objective}}
+
+    def ReSet(self) -> str:
+        """
+        生成将计分目标重置的指令
+
+        :return: 生成的指令
+        :rtype: str
+        """
+        return SB_RESET(
+            self.name, self.objective
+        )
 
     def __str__(self):
-        return f"{type(self).__name__}({self.name=}, {self.namespace=})"
+        return f"{type(self).__name__}({self.name=}, {self.objective=})"
 
 
 def _parse_node(node: Any, namespace: str):
@@ -94,7 +109,7 @@ def _parse_node(node: Any, namespace: str):
     if isinstance(node, ast.Constant):
         return node.value
     if isinstance(node, ast.Name):
-        return NameNode(node.id, namespace=namespace)
+        return ArgData(f"{namespace}.{node.id}", ScoreBoards.Vars)
     if isinstance(node, ast.Dict):
         dict_result = {}
         for key, value in zip(node.keys, node.values, strict=True):
@@ -277,13 +292,38 @@ def call_template(
     args = []
     kwargs = {}
 
+    def _parse(value_node: Any) -> tuple[str, ArgData]:
+        if type(value_node) in {ast.Constant, ast.Dict, ast.Name}:
+            return '', _parse_node(value_node, namespace)
+        if type(value_node) not in env.code_generators:
+            return '', _parse_node(value_node, namespace)
+        cmd = COMMENT("Template.Call:计算参数值")
+        cmd += env.generate_code(value_node, namespace, file_namespace)
+
+        cmd += COMMENT("Template.Call:传递参数")
+        process_id = env.newID("Template.Call.Arg")
+        arg_ext = f".*TemplateCallArg{process_id}"
+        cmd += SB_ASSIGN(
+            f"{template_func_name}{arg_ext}", g_conf.SB_ARGS,
+            f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP
+        )
+
+        cmd += SB_RESET(f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP)
+
+        return cmd, ArgData(f"{template_func_name}{arg_ext}", g_conf.SB_ARGS)
+
     for arg in node.args:
-        args.append(_parse_node(arg, namespace))
+        cmds, arg_data = _parse(arg)
+        commands += cmds
+        args.append(arg_data)
 
     for kwarg in node.keywords:
         if not isinstance(kwarg, ast.keyword):
             raise TypeError("kwargs must be keyword")
-        kwargs[kwarg.arg] = _parse_node(kwarg.value, namespace)
+
+        cmds, arg_data = _parse(kwarg.value)
+        commands += cmds
+        kwargs[kwarg.arg] = arg_data
 
     commands += func(
         args, kwargs,
@@ -291,6 +331,16 @@ def call_template(
         namespace=namespace, file_namespace=file_namespace
     )
     commands += COMMENT(f"Template.Call:调用模版函数结束")
+    for arg in args:
+        if not isinstance(arg, ArgData):
+            continue
+        if arg.objective == g_conf.SB_ARGS:
+            commands += arg.ReSet()
+    for kwarg in kwargs:
+        if not isinstance(kwargs[kwarg], ArgData):
+            continue
+        if kwargs[kwarg].objective == g_conf.SB_ARGS:
+            commands += kwargs[kwarg].ReSet()
     return commands
 
 
@@ -317,7 +367,7 @@ class CommandResult:
 
 
 __all__ = (
-    "NameNode",
+    "ArgData",
     "template_funcs",
     "register_func",
 

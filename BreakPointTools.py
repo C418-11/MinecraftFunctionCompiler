@@ -82,7 +82,13 @@ def register_processor(name: str | None) -> Callable[[Processor_T], Processor_T]
 _BP_ID: int = 0
 
 
-def raiseBreakPoint(env: ABCEnvironment, file_namespace: str, func: str | None, *func_args, **func_kwargs) -> None:
+def raiseBreakPoint(
+        env: ABCEnvironment,
+        file_namespace: str,
+        func: str | None,
+        *func_args,
+        **func_kwargs
+) -> None:
     """
     抛出断点
 
@@ -116,7 +122,12 @@ def raiseBreakPoint(env: ABCEnvironment, file_namespace: str, func: str | None, 
     _BP_ID += 1
 
 
-def updateBreakPoint(env: ABCEnvironment, c_conf: CompileConfiguration, g_conf: GlobalConfiguration, file_namespace: str) -> str:
+def updateBreakPoint(
+        env: ABCEnvironment,
+        c_conf: CompileConfiguration,
+        g_conf: GlobalConfiguration,
+        file_namespace: str
+) -> str:
     """
     更新断点
 

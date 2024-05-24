@@ -7,6 +7,7 @@
 
 import json
 
+from ABC import ABCEnvironment
 from BreakPointTools import BreakPointFlag
 from BreakPointTools import raiseBreakPoint
 from BreakPointTools import register_processor
@@ -20,7 +21,7 @@ from ScoreboardTools import SBCheckType
 from ScoreboardTools import SBCompareType
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_RESET
-from Template import NameNode
+from Template import ArgData
 from Template import register_func
 
 SB_TEMP = ScoreBoards.Temp
@@ -43,7 +44,7 @@ def _tprint(*objects, sep: str = ' ', end: str = '\n'):
         obj_json.append({"text": '↳'})
 
     for obj in objects:
-        if isinstance(obj, NameNode):
+        if isinstance(obj, ArgData):
             raw_json = obj.toJson()
         else:
             raw_json = {"text": str(obj)}
@@ -165,16 +166,11 @@ def _sbp_breakpoint(func_path, level, *, name, objective):
         return _process_split()
 
 
-_BP_ID: int = 0
-
-
-def _tbreakpoint(*, env, file_namespace: str):
-    global _BP_ID
+def _tbreakpoint(*, env: ABCEnvironment, file_namespace: str):
 
     command = ''
 
-    breakpoint_id = f"BreakPoint:{file_namespace}\\{_BP_ID}"
-    _BP_ID += 1
+    breakpoint_id = f"BreakPoint:{file_namespace}\\{env.newID("tbreakpoint")}"
 
     command += COMMENT("BP:breakpoint.Enable")
     command += SB_ASSIGN(

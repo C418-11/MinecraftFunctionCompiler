@@ -20,6 +20,9 @@ class ABCEnvironment(ABC):
     """
     Environment的抽象类，用于定义环境的基本行为和属性。
     """
+
+    code_generators: dict[str, dict[str, Any]]
+
     def __init__(self, c_conf: CompileConfiguration, g_conf: GlobalConfiguration = None) -> None:
         """
         初始化
@@ -39,6 +42,22 @@ class ABCEnvironment(ABC):
         self.file_namespace = FileNamespace()
 
         self.func_args: dict[str, OrderedDict[str, ABCParameter]] = {}
+        self._global_ids: dict[str, int] = {}
+
+    def newID(self, name: str):
+        """
+        生成新的ID
+
+        :param name: 名称
+        :type name: str
+        :return: 新的ID
+        :rtype: int
+        """
+        if name in self._global_ids:
+            self._global_ids[name] += 1
+        else:
+            self._global_ids[name] = 0
+        return self._global_ids[name]
 
     @abstractmethod
     def generate_code(self, node: Any, namespace: str, file_namespace: str) -> str:

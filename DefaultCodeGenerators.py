@@ -33,7 +33,6 @@ from ScoreboardTools import SB_CONSTANT
 from ScoreboardTools import SB_OP
 from ScoreboardTools import SBCompareType
 from ScoreboardTools import SBCheckType
-from ScoreboardTools import init_name
 from ScoreboardTools import gen_code
 from ScoreboardTools import CHECK_SB
 from Template import check_template
@@ -48,15 +47,6 @@ def is_parent_path(path1, path2):
     path1 = os.path.abspath(path1)
     path2 = os.path.abspath(path2)
     return os.path.commonpath([path1, path2]) == path1
-
-
-GlobalId = 0
-
-
-def newUid() -> str:
-    global GlobalId
-    GlobalId += 1
-    return hex(GlobalId)[2:]
 
 
 def is_import_alive(import_path: str, base: str = '') -> tuple[str | None, bool | None]:
@@ -263,7 +253,7 @@ def gen_name(env: ABCEnvironment, g_conf: GlobalConfiguration, node: ast.Name, n
     target_ns = env.ns_getter(node.id, namespace)[0]
     command += SB_ASSIGN(
         f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP,
-        f"{target_ns}", g_conf.SB_FLAGS
+        f"{target_ns}", g_conf.SB_VARS
     )
     return command
 
@@ -273,7 +263,6 @@ def gen_call(
         env: ABCEnvironment,
         c_conf: CompileConfiguration,
         g_conf: GlobalConfiguration, node, namespace: str, file_namespace: str) -> str:
-    is_builtin: bool = False
     if isinstance(node.func, ast.Name) and node.func.id in dir(__builtins__):
         raise Exception("暂不支持python内置函数")
     else:
@@ -314,8 +303,6 @@ def gen_call(
         commands += env.generate_code(value, namespace, file_namespace)
 
         commands += COMMENT("Call:传递参数", name=name)
-        if is_builtin:
-            init_name(f"{func_ns}.{name}", g_conf.SB_ARGS)
         commands += SB_ASSIGN(
             f"{func_ns}.{name}", g_conf.SB_ARGS,
             f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP
@@ -417,7 +404,7 @@ def gen_bin_op(
     command += COMMENT(f"BinOp:处理左值")
     command += env.generate_code(node.left, namespace, file_namespace)
 
-    process_uid = newUid()
+    process_uid = env.newID("process")
 
     process_ext = f".*BinOp{process_uid}"
 
@@ -586,7 +573,7 @@ def gen_if(
         c_conf: CompileConfiguration,
         g_conf: GlobalConfiguration,
         node: ast.If, namespace: str, file_namespace: str) -> str:
-    block_uid = newUid()
+    block_uid = env.newID("if-block")
 
     base_namespace = f"{namespace}\\.if"
 
@@ -682,7 +669,7 @@ def gen_return(
     command += SB_RESET(f"{namespace}{g_conf.ResultExt}", g_conf.SB_TEMP)
 
     command += COMMENT("BP:Return.Enable")
-    breakpoint_id = f"breakpoint_return_{newUid()}"
+    breakpoint_id = f"breakpoint_return_{env.newID("return.breakpoint")}"
     command += SB_ASSIGN(
         f"{breakpoint_id}", g_conf.SB_TEMP,
         g_conf.Flags.TRUE, g_conf.SB_FLAGS
@@ -774,8 +761,11 @@ def gen_compare(
                 line_break=False
             )
         )
+
+        command += COMMENT(f"Compare:重置计算临时变量")
         command += SB_RESET(f"{namespace}.*CompareCalculate", g_conf.SB_TEMP)
 
+    command += COMMENT(f"Compare:重置左值")
     command += SB_RESET(f"{namespace}.*CompareLeft", g_conf.SB_TEMP)
 
     command += COMMENT(f"Compare:传递结果")
@@ -801,7 +791,6 @@ def gen_arguments(
             stacklevel=0
         )
 
-    args_dict = OrderedDict()
     command = ''
 
     command += COMMENT(f"arguments:处理参数")
@@ -825,10 +814,7 @@ def gen_arguments(
 
         command += SB_RESET(f"{namespace}.{name}", g_conf.SB_ARGS)
 
-    # 将最终顺序反转回来
-    args_dict = OrderedDict([(k, v) for k, v in reversed(args_dict.items())])
-
-    env.func_args[namespace] = args_dict
+    env.func_args[namespace] = arguments_dict
 
     return command
 
