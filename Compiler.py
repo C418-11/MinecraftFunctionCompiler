@@ -28,8 +28,6 @@ class Compiler:
         :type environment: Environment
         :return: None
         :rtype: None
-
-        .. seealso:: Environment
         """
         self.env = environment
         self.c_conf = environment.c_conf

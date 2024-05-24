@@ -15,6 +15,8 @@ from typing import Self
 from typing import TypeVar
 
 from ABC import ABCEnvironment
+from Configuration import CompileConfiguration
+from Configuration import GlobalConfiguration
 
 Processor = Callable[[str | None, str | None, ...], str | None | tuple[str, bool]]
 
@@ -114,14 +116,14 @@ def raiseBreakPoint(env: ABCEnvironment, file_namespace: str, func: str | None, 
     _BP_ID += 1
 
 
-def updateBreakPoint(env: ABCEnvironment, c_conf, g_conf, file_namespace: str) -> str:
+def updateBreakPoint(env: ABCEnvironment, c_conf: CompileConfiguration, g_conf: GlobalConfiguration, file_namespace: str) -> str:
     """
     更新断点
 
     :param env: 运行环境
     :type env: ABCEnvironment
-    :param c_conf: 编译器配置
-    :type c_conf: CompilerConfiguration
+    :param c_conf: 编译配置
+    :type c_conf: CompileConfiguration
     :param g_conf: 全局配置
     :type g_conf: GlobalConfiguration
     :param file_namespace: 需要更新的文件命名空间

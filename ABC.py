@@ -24,7 +24,7 @@ class ABCEnvironment(ABC):
         """
         初始化
 
-        :param c_conf: 编译器配置
+        :param c_conf: 编译配置
         :type c_conf: CompileConfiguration
         :param g_conf: 全局配置
         :type g_conf: GlobalConfiguration

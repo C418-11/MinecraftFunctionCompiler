@@ -18,6 +18,8 @@ from Constant import ResultExt
 from Constant import ScoreBoards
 from DebuggingTools import COMMENT
 from ABC import ABCEnvironment
+from Configuration import CompileConfiguration
+from Configuration import GlobalConfiguration
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_Name2Code
 
@@ -135,7 +137,7 @@ def register_func(func_for_compile: Callable[..., str]) -> Callable[[Callable_T]
         :type kwargs: dict | None
         :param env: 运行环境
         :type env: Environment
-        :param c_conf: 编译器配置
+        :param c_conf: 编译配置
         :type c_conf: CompilerConfiguration
         :param g_conf: 全局配置
         :type g_conf: GlobalConfiguration
@@ -215,7 +217,7 @@ def check_template(file_path: str) -> bool:
     return False
 
 
-def init_template(name: str, env: ABCEnvironment, c_conf, g_conf) -> None:
+def init_template(name: str, env: ABCEnvironment, c_conf: CompileConfiguration, g_conf: GlobalConfiguration) -> None:
     """
     初始化模板文件
 
@@ -223,8 +225,8 @@ def init_template(name: str, env: ABCEnvironment, c_conf, g_conf) -> None:
     :type name: str
     :param env: 运行环境
     :type env: Environment
-    :param c_conf: 编译器配置
-    :type c_conf: CompilerConfiguration
+    :param c_conf: 编译配置
+    :type c_conf: CompileConfiguration
     :param g_conf: 全局配置
     :type g_conf: GlobalConfiguration
     :return: None
@@ -240,7 +242,34 @@ def init_template(name: str, env: ABCEnvironment, c_conf, g_conf) -> None:
         print(f"Template:模板 {name} 初始化失败", file=sys.stderr)
 
 
-def call_template(env, c_conf, g_conf, template_func_name, node: ast.Call, namespace, file_namespace):
+def call_template(
+        env: ABCEnvironment,
+        c_conf: CompileConfiguration,
+        g_conf: GlobalConfiguration,
+        template_func_name: str,
+        node: ast.Call,
+        namespace: str,
+        file_namespace: str) -> str:
+    """
+    调用模板函数
+
+    :param env: 运行环境
+    :type env: Environment
+    :param c_conf: 编译配置
+    :type c_conf: CompileConfiguration
+    :param g_conf: 全局配置
+    :type g_conf: GlobalConfiguration
+    :param template_func_name: 模板函数名称
+    :type template_func_name: str
+    :param node: 函数调用节点
+    :type node: ast.Call
+    :param namespace: 调用所在命名空间
+    :type namespace: str
+    :param file_namespace: 调用所在文件命名空间
+    :type file_namespace: str
+    :return: 生成的MCF
+    :rtype: str
+    """
     func = template_funcs[template_func_name]
     commands = ''
     commands += COMMENT(f"Template.Call:调用模板函数", func=template_func_name)
@@ -267,9 +296,10 @@ def call_template(env, c_conf, g_conf, template_func_name, node: ast.Call, names
 
 class CommandResult:
     """
-    .. warning::
+    python环境下模板函数返回值
 
-        即将弃用
+    .. warning::
+       即将弃用
     """
 
     def __init__(self, *other, success: bool, result: int = None):
