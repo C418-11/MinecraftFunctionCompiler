@@ -12,6 +12,7 @@ from ABC import ABCEnvironment
 from BreakPointTools import BreakPointFlag
 from BreakPointTools import raiseBreakPoint
 from BreakPointTools import register_processor
+from Configuration import GlobalConfiguration
 from Constant import RawJsons
 from DebuggingTools import FORCE_COMMENT
 from ScoreboardTools import CHECK_SB
@@ -19,10 +20,8 @@ from ScoreboardTools import SBCheckType
 from ScoreboardTools import SBCompareType
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_RESET
-from Configuration import GlobalConfiguration
 from Template import ArgData
 from Template import register_func
-
 
 print_end: bool = True
 
@@ -176,7 +175,6 @@ def _sbp_breakpoint(
 
 
 def _tbreakpoint(*, g_conf: GlobalConfiguration, env: ABCEnvironment, file_namespace: str):
-
     command = ''
 
     breakpoint_id = f"BreakPoint:{file_namespace}\\{env.newID("tbreakpoint")}"

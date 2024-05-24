@@ -6,9 +6,7 @@
 
 ### [`API文档`(点击跳转)](https://minecraftfunctioncompiler.readthedocs.io/zh/latest/index.html)
 
-
 # *!!以下内容大部分已过时*
-
 
 # 目录
 

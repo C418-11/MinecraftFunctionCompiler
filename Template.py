@@ -16,8 +16,8 @@ from ABC import ABCEnvironment
 from Configuration import CompileConfiguration
 from Configuration import GlobalConfiguration
 from ScoreboardTools import SB_ASSIGN
-from ScoreboardTools import SB_RESET
 from ScoreboardTools import SB_Name2Code
+from ScoreboardTools import SB_RESET
 
 template_funcs = {}
 

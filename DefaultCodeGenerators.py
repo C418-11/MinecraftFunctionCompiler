@@ -12,32 +12,32 @@ import warnings
 from collections import OrderedDict
 from itertools import zip_longest
 
-from BreakPointTools import register_processor
-from BreakPointTools import raiseBreakPoint
-from BreakPointTools import updateBreakPoint
+from ABC import ABCEnvironment
 from BreakPointTools import BreakPointFlag
+from BreakPointTools import raiseBreakPoint
+from BreakPointTools import register_processor
+from BreakPointTools import updateBreakPoint
 from Configuration import CompileConfiguration
 from Configuration import GlobalConfiguration
 from DebuggingTools import FORCE_COMMENT
-from ABC import ABCEnvironment
 from NamespaceTools import join_file_ns
 from ParameterTypes import ABCDefaultParameter
 from ParameterTypes import ABCKeyword
 from ParameterTypes import ABCVariableLengthParameter
 from ParameterTypes import parse_arguments
+from ScoreboardTools import CHECK_SB
+from ScoreboardTools import SBCheckType
+from ScoreboardTools import SBCompareType
 from ScoreboardTools import SBOperationType
-from ScoreboardTools import SB_RESET
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_CONSTANT
 from ScoreboardTools import SB_OP
-from ScoreboardTools import SBCompareType
-from ScoreboardTools import SBCheckType
+from ScoreboardTools import SB_RESET
 from ScoreboardTools import gen_code
-from ScoreboardTools import CHECK_SB
+from Template import call_template
 from Template import check_template
 from Template import init_template
 from Template import template_funcs
-from Template import call_template
 
 loaded_modules: dict[str, bool] = {}
 
@@ -194,6 +194,7 @@ def register_default_gen(node_type):
         parameters = set(inspect.signature(func).parameters.keys())
         DefaultCodeGenerators[node_type] = {"func": func, "params": parameters}
         return func
+
     return decorator
 
 

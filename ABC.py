@@ -6,9 +6,9 @@
 
 from abc import ABC
 from abc import abstractmethod
+from collections import OrderedDict
 from typing import Any
 from typing import Callable
-from collections import OrderedDict
 
 from Configuration import CompileConfiguration
 from Configuration import GlobalConfiguration
@@ -19,6 +19,7 @@ class ABCNamespace(ABC):
     """
     命名空间存储及其操作
     """
+
     def __init__(self, base_namespace) -> None:
         """
         初始化命名空间
@@ -182,6 +183,7 @@ class ABCFileNamespace(ABC):
     """
     文件命名空间存储及其操作
     """
+
     def __init__(self):
         """
         初始化文件命名空间

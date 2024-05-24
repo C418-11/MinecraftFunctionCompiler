@@ -7,13 +7,13 @@
 import ast
 from collections import OrderedDict
 from typing import Any
-from typing import override
 from typing import Callable
+from typing import override
 
+from ABC import ABCFileNamespace
+from ABC import ABCNamespace
 from Configuration import GlobalConfiguration
 from ScoreboardTools import SB_Name2Code
-from ABC import ABCNamespace
-from ABC import ABCFileNamespace
 
 
 class Namespace(ABCNamespace):

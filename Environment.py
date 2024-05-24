@@ -11,15 +11,15 @@ import warnings
 from typing import Any
 from typing import override
 
+from ABC import ABCEnvironment
 from BreakPointTools import SplitBreakPoint
 from Configuration import CompileConfiguration
 from Configuration import GlobalConfiguration
 from DebuggingTools import FORCE_COMMENT
 from DefaultCodeGenerators import DefaultCodeGenerators
-from NamespaceTools import join_file_ns
-from NamespaceTools import Namespace
 from NamespaceTools import FileNamespace
-from ABC import ABCEnvironment
+from NamespaceTools import Namespace
+from NamespaceTools import join_file_ns
 
 
 class SBPWrapper(SplitBreakPoint):
@@ -198,6 +198,7 @@ class CompileTraceback:
     """
     保存编译过程中的追踪信息
     """
+
     def __init__(
             self,
             source_file_path: str,
@@ -313,6 +314,7 @@ class CompileFailedException(Exception):
     """
     编译失败异常
     """
+
     def __init__(self, raw_exc: BaseException) -> None:
         """
         初始化

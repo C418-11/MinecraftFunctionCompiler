@@ -6,7 +6,6 @@
 
 
 class GlobalConfiguration:
-
     DECIMAL_PRECISION: int = 3
     ResultExt: str = ".?Result"
 

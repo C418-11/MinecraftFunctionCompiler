@@ -6,11 +6,11 @@
 """
 import json
 
-from MinecraftColorString import ColorString
-from Template import CommandResult
-from Template import ArgData
-from Template import register_func
 from Configuration import GlobalConfiguration
+from MinecraftColorString import ColorString
+from Template import ArgData
+from Template import CommandResult
+from Template import register_func
 
 BossBar_Map = {}
 

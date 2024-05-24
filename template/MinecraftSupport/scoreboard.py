@@ -5,14 +5,12 @@
 对计分板操作的支持
 """
 
-
+from Configuration import GlobalConfiguration
 from ScoreboardTools import SB_ASSIGN
 from ScoreboardTools import SB_CONSTANT
 from ScoreboardTools import init_name
 from Template import ArgData
 from Template import register_func
-from Configuration import GlobalConfiguration
-
 
 SB_MAP: dict[str, dict[str, int]] = {}
 

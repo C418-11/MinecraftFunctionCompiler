@@ -4,6 +4,7 @@
 一些调试用MCF命令生成器
 """
 
+
 # import json
 #
 # from Constant import Flags
