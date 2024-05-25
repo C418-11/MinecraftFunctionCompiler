@@ -13,7 +13,6 @@ from BreakPointTools import BreakPointFlag
 from BreakPointTools import raiseBreakPoint
 from BreakPointTools import register_processor
 from Configuration import GlobalConfiguration
-from Constant import RawJsons
 from DebuggingTools import FORCE_COMMENT
 from ScoreboardTools import CHECK_SB
 from ScoreboardTools import SBCheckType
@@ -146,7 +145,7 @@ def _sbp_breakpoint(
         continue_json = {
             "text": '',
             "extra": [
-                RawJsons.Prefix,
+                g_conf.RawJsons.Prefix,
                 {"text": ' '},
                 {"text": "[调用栈]", "color": "gray", "italic": True, "underlined": True},
                 {

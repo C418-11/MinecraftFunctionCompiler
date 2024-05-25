@@ -40,6 +40,39 @@ class GlobalConfiguration:
         LocalVars = "LocalVars"
         LocalTemp = "LocalTemp"
 
+    class _RawJsons:
+        """
+        这个类存储了一些常用的原始JSON文本
+        """
+        Prefix = {
+            "text": "[Python]",
+
+            "clickEvent": {
+                "action": "open_url", "value": "https://github.com/C418-11/MinecraftFunctionCompiler"
+            },
+            "hoverEvent": {
+                "action": "show_text", "value": "GitHub"
+            },
+
+            "color": "gold",
+
+            "bold": False,
+            "italic": False,
+            "underlined": False,
+            "strikethrough": False,
+            "obfuscated": False,
+
+            "font": "minecraft:default",
+        }
+
+        class HoverEvents:
+            """
+            这个类存储了一些常用的hoverEvent原始JSON
+            """
+            Author = {
+                "hoverEvent": {"action": "show_text", "value": "Made By: C418____11"}
+            }
+
     def __init__(self):
         self.Flags = self._Flags()
 
@@ -56,6 +89,8 @@ class GlobalConfiguration:
         self.DS_TEMP = self.DataStorages.Temp
         self.DS_LOCAL_VARS = self.DataStorages.LocalVars
         self.DS_LOCAL_TEMP = self.DataStorages.LocalTemp
+
+        self.RawJsons = self._RawJsons()
 
 
 class CompileConfiguration:
