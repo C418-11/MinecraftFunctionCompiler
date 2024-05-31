@@ -1,0 +1,9 @@
+{
+	"pack": {
+		"pack_format": 18,
+		"description": "Python解释器\nv0.0.0Dev",
+		"supported_formats": {
+			"min_inclusive": 18,
+		}
+	}
+}

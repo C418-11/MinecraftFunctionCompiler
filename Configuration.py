@@ -20,6 +20,17 @@ class GlobalConfiguration:
         Vars = "Py.Vars"
         FuncResult = "Py.FuncResult"
 
+        def __placeholder__(self):
+            data = {
+                "SB:Args": self.Args,
+                "SB:Temp": self.Temp,
+                "SB:Flags": self.Flags,
+                "SB:Input": self.Input,
+                "SB:Vars": self.Vars,
+                "SB:FuncResult": self.FuncResult,
+            }
+            return data
+
     class _Flags:
         """
         这个类存储了一些常用的标记位名称
@@ -30,6 +41,16 @@ class GlobalConfiguration:
 
         DEBUG = "DEBUG"
 
+        def __placeholder__(self):
+            data = {
+                "FLAG:TRUE": self.TRUE,
+                "FLAG:FALSE": self.FALSE,
+                "FLAG:NEG": self.NEG,
+
+                "FLAG:DEBUG": self.DEBUG,
+            }
+            return data
+
     class _DataStorages:
         """
         这个类存储了必要 data storage 的名称
@@ -39,6 +60,16 @@ class GlobalConfiguration:
         Temp = "temporary"
         LocalVars = "LocalVars"
         LocalTemp = "LocalTemp"
+
+        def __placeholder__(self):
+            data = {
+                "DS:Root": self.Root,
+
+                "DS:Temp": self.Temp,
+                "DS:LocalVars": self.LocalVars,
+                "DS:LocalTemp": self.LocalTemp,
+            }
+            return data
 
     class _RawJsons:
         """
@@ -64,6 +95,13 @@ class GlobalConfiguration:
 
             "font": "minecraft:default",
         }
+
+        def __placeholder__(self):
+            data = {
+                "RAWJSON:Prefix": self.Prefix,
+                "RAWJSON.HoverEvent:Author": self.HoverEvents.Author,
+            }
+            return data
 
         class HoverEvents:
             """
@@ -91,6 +129,15 @@ class GlobalConfiguration:
         self.DS_LOCAL_TEMP = self.DataStorages.LocalTemp
 
         self.RawJsons = self._RawJsons()
+
+    def __placeholder__(self):
+        data = {
+            **self.ScoreBoards.__placeholder__(),
+            **self.Flags.__placeholder__(),
+            **self.DataStorages.__placeholder__(),
+            **self.RawJsons.__placeholder__(),
+        }
+        return data
 
 
 class CompileConfiguration:

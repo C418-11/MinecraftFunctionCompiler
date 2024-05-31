@@ -9,7 +9,7 @@ def main():
     # save_path = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks\函数测试\data\source_code\functions"
 
     read_path = "./tests"
-    file_name = "func_add"
+    file_name = "var_add"
 
     compile_configuration = CompileConfiguration("source_code:", read_path, save_path, debug_mode=True)
     environment = Environment(compile_configuration)

@@ -5,9 +5,12 @@
 """
 
 import os
-import re
 
-from Constant import PLACEHOLDER_MAP
+from Configuration import GlobalConfiguration
+from jinja2 import Environment
+
+
+env = Environment()
 
 
 def replace_placeholders(code: str, data: dict) -> str:
@@ -21,14 +24,11 @@ def replace_placeholders(code: str, data: dict) -> str:
     :return: 替换后的代码
     :rtype: str
     """
-    matches = re.findall(r'\$\{([^{}$]+)}', code)
 
-    for match in matches:
-        key = match.strip()
-        if key in data:
-            code = code.replace(f'${{{key}}}', data[key])
-        else:
-            raise KeyError(f'Key {key} not found in data')
+    template = env.from_string(code)
+
+    # 渲染模板
+    code = template.render(**data)
 
     return code
 
@@ -95,6 +95,8 @@ def main():
     # save_path = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks""
     read_path = r".\Python"
 
+    placeholder_map = GlobalConfiguration().__placeholder__()
+
     for file_path, relative_path, file in get_files(r"", read_path):
 
         print(file_path, relative_path, file)
@@ -107,7 +109,7 @@ def main():
         ext = os.path.splitext(file)[1]
         if ext in file_extensions:
             print("Processing", file_path)
-            new_code = replace_placeholders(code, PLACEHOLDER_MAP)
+            new_code = replace_placeholders(code, placeholder_map)
         else:
             print("No Processing", file_path)
             new_code = code
