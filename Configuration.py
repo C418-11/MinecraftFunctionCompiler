@@ -3,6 +3,7 @@
 """
 定义了一些配置文件
 """
+import json
 
 
 class GlobalConfiguration:
@@ -13,6 +14,11 @@ class GlobalConfiguration:
         """
         这个类存储了必要计分项的名称
         """
+
+        State = "PyI.State"
+        Config = "PyI.Config"
+        Constant = "PyI.Constant"
+
         Args = "Py.Args"
         Temp = "Py.Temp"
         Flags = "Py.Flags"
@@ -22,12 +28,16 @@ class GlobalConfiguration:
 
         def __placeholder__(self):
             data = {
-                "SB:Args": self.Args,
-                "SB:Temp": self.Temp,
-                "SB:Flags": self.Flags,
-                "SB:Input": self.Input,
-                "SB:Vars": self.Vars,
-                "SB:FuncResult": self.FuncResult,
+                "State": self.State,
+                "Config": self.Config,
+                "Constant": self.Constant,
+
+                "Args": self.Args,
+                "Temp": self.Temp,
+                "Flags": self.Flags,
+                "Input": self.Input,
+                "Vars": self.Vars,
+                "FuncResult": self.FuncResult,
             }
             return data
 
@@ -43,11 +53,11 @@ class GlobalConfiguration:
 
         def __placeholder__(self):
             data = {
-                "FLAG:TRUE": self.TRUE,
-                "FLAG:FALSE": self.FALSE,
-                "FLAG:NEG": self.NEG,
+                "TRUE": self.TRUE,
+                "FALSE": self.FALSE,
+                "NEG": self.NEG,
 
-                "FLAG:DEBUG": self.DEBUG,
+                "DEBUG": self.DEBUG,
             }
             return data
 
@@ -55,19 +65,30 @@ class GlobalConfiguration:
         """
         这个类存储了必要 data storage 的名称
         """
+        NameSpace = "python_interpreter"
         Root = "python"
 
         Temp = "temporary"
         LocalVars = "LocalVars"
         LocalTemp = "LocalTemp"
 
+        def __init__(self):
+            self.Flags = f"{self.NameSpace}:flags"
+            self.Config = f"{self.NameSpace}:config"
+            self.State = f"{self.NameSpace}:state"
+
         def __placeholder__(self):
             data = {
-                "DS:Root": self.Root,
+                "NS": self.NameSpace,
+                "Flags": self.Flags,
+                "Config": self.Config,
+                "State": self.State,
 
-                "DS:Temp": self.Temp,
-                "DS:LocalVars": self.LocalVars,
-                "DS:LocalTemp": self.LocalTemp,
+                "Root": self.Root,
+
+                "Temp": self.Temp,
+                "LocalVars": self.LocalVars,
+                "LocalTemp": self.LocalTemp,
             }
             return data
 
@@ -98,18 +119,26 @@ class GlobalConfiguration:
 
         def __placeholder__(self):
             data = {
-                "RAWJSON:Prefix": self.Prefix,
-                "RAWJSON.HoverEvent:Author": self.HoverEvents.Author,
+                "Prefix": json.dumps(self.Prefix),
+                "HoverEvent": self.HoverEvents.__placeholder__(),
             }
             return data
 
-        class HoverEvents:
+        class _HoverEvents:
             """
             这个类存储了一些常用的hoverEvent原始JSON
             """
             Author = {
                 "hoverEvent": {"action": "show_text", "value": "Made By: C418____11"}
             }
+
+            def __placeholder__(self):
+                data = {
+                    "Author": json.dumps(self.Author)[1:-1],
+                }
+                return data
+
+        HoverEvents = _HoverEvents()
 
     def __init__(self):
         self.Flags = self._Flags()
@@ -132,10 +161,10 @@ class GlobalConfiguration:
 
     def __placeholder__(self):
         data = {
-            **self.ScoreBoards.__placeholder__(),
-            **self.Flags.__placeholder__(),
-            **self.DataStorages.__placeholder__(),
-            **self.RawJsons.__placeholder__(),
+            "SB": self.ScoreBoards.__placeholder__(),
+            "FLAGS": self.Flags.__placeholder__(),
+            "DS": self.DataStorages.__placeholder__(),
+            "RAWJSON": self.RawJsons.__placeholder__(),
         }
         return data
 

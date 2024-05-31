@@ -3,7 +3,7 @@
 """
 替换源码中的占位符
 """
-
+import json
 import os
 
 from Configuration import GlobalConfiguration
@@ -24,11 +24,10 @@ def replace_placeholders(code: str, data: dict) -> str:
     :return: 替换后的代码
     :rtype: str
     """
-
     template = env.from_string(code)
 
     # 渲染模板
-    code = template.render(**data)
+    code = template.render(data)
 
     return code
 
@@ -91,9 +90,9 @@ def get_files(base_path: str, root_dir: str) -> str:
 
 def main():
     file_extensions = [".mcfunction", ".mcmeta"]
-    save_path = r".\.output"
-    # save_path = r"D:\game\Minecraft\.minecraft\versions\1.16.5投影\saves\函数\datapacks""
-    read_path = r".\Python"
+    save_path = r"D:\game\Minecraft\.minecraft\versions\1.20.6-MCFC\saves\函数\datapacks"
+    # save_path = r".\.output"
+    read_path = r".\PythonInterpreter"
 
     placeholder_map = GlobalConfiguration().__placeholder__()
 
