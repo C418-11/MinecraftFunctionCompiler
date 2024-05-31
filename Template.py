@@ -12,7 +12,7 @@ from typing import Any
 from typing import Callable
 from typing import TypeVar
 
-from ABC import ABCEnvironment
+from ABCTypes import ABCEnvironment
 from Configuration import CompileConfiguration
 from Configuration import GlobalConfiguration
 from ScoreboardTools import SB_ASSIGN

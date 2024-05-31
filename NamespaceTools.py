@@ -10,8 +10,8 @@ from typing import Any
 from typing import Callable
 from typing import override
 
-from ABC import ABCFileNamespace
-from ABC import ABCNamespace
+from ABCTypes import ABCFileNamespace
+from ABCTypes import ABCNamespace
 from Configuration import GlobalConfiguration
 from ScoreboardTools import SB_Name2Code
 

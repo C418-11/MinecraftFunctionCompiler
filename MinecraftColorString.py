@@ -273,6 +273,9 @@ class ColorString:
         elif type(json_dict) is str:
             parse_type = ParseType.Text
             json_dict = cls.from_string(json_dict).to_dict()
+        elif type(json_dict) is list:
+            parse_type = ParseType.Extra
+            json_dict = {"extra": json_dict}
         else:
             raise ValueError("Unknown json dict")
 

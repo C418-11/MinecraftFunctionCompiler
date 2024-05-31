@@ -8,7 +8,7 @@
 import json
 from typing import Any
 
-from ABC import ABCEnvironment
+from ABCTypes import ABCEnvironment
 from BreakPointTools import BreakPointFlag
 from BreakPointTools import raiseBreakPoint
 from BreakPointTools import register_processor

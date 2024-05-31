@@ -14,7 +14,7 @@ from typing import Callable
 from typing import Self
 from typing import TypeVar
 
-from ABC import ABCEnvironment
+from ABCTypes import ABCEnvironment
 from Configuration import CompileConfiguration
 from Configuration import GlobalConfiguration
 

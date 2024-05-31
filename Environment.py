@@ -11,7 +11,7 @@ import warnings
 from typing import Any
 from typing import override
 
-from ABC import ABCEnvironment
+from ABCTypes import ABCEnvironment
 from BreakPointTools import SplitBreakPoint
 from Configuration import CompileConfiguration
 from Configuration import GlobalConfiguration
