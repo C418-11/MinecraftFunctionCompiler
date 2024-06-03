@@ -18,9 +18,10 @@ class GlobalConfiguration:
         State = "PyI.State"
         Config = "PyI.Config"
         Constant = "PyI.Constant"
+        Temp = "PyI.Temp"
 
         Args = "Py.Args"
-        Temp = "Py.Temp"
+        # Temp = "Py.Temp"
         Flags = "Py.Flags"
         Input = "Py.Input"
         Vars = "Py.Vars"
@@ -31,9 +32,10 @@ class GlobalConfiguration:
                 "State": self.State,
                 "Config": self.Config,
                 "Constant": self.Constant,
+                "Temp": self.Temp,
 
                 "Args": self.Args,
-                "Temp": self.Temp,
+                # "Temp": self.Temp,
                 "Flags": self.Flags,
                 "Input": self.Input,
                 "Vars": self.Vars,
@@ -68,7 +70,7 @@ class GlobalConfiguration:
         NameSpace = "python_interpreter"
         Root = "python"
 
-        Temp = "temporary"
+        # Temp = "temporary"
         LocalVars = "LocalVars"
         LocalTemp = "LocalTemp"
 
@@ -76,6 +78,8 @@ class GlobalConfiguration:
             self.Flags = f"{self.NameSpace}:flags"
             self.Config = f"{self.NameSpace}:config"
             self.State = f"{self.NameSpace}:state"
+            self.EntityData = f"{self.NameSpace}:entity_data"
+            self.Temp = f"{self.NameSpace}:temporary"
 
         def __placeholder__(self):
             data = {
@@ -83,10 +87,12 @@ class GlobalConfiguration:
                 "Flags": self.Flags,
                 "Config": self.Config,
                 "State": self.State,
+                "EntityData": self.EntityData,
+                "Temp": self.Temp,
 
                 "Root": self.Root,
 
-                "Temp": self.Temp,
+                # "Temp": self.Temp,
                 "LocalVars": self.LocalVars,
                 "LocalTemp": self.LocalTemp,
             }

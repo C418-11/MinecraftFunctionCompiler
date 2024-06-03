@@ -1,0 +1,7 @@
+{% from "render_lib.jinja2" import print_line, translate, option, run_command, run_pyifunc with context %}
+
+{{print_line("@s", "green", translate("options.details.title", "======详细信息======", click_event=run_pyifunc("display_options/details/back")))}}
+
+
+{{option("dark_red", "options.details.scb.state", "[SCB][State]", click_event=run_command("/scoreboard objectives setdisplay sidebar "+SB.State), hover_text=translate("options.details.scb.state.hover", "null"))}}
+

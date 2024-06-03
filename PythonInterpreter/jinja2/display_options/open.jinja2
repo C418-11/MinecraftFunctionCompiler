@@ -1,0 +1,6 @@
+{% from "call_lib.jinja2" import call_pyifunc with context %}
+
+{% macro open(page_path)
+%}${{ call_pyifunc(page_path+"/set_back {father: \"$(father)\", player_uuid: \"$(player_uuid)\"}") }}
+{{ call_pyifunc(page_path+"/render") }}{%
+endmacro %}

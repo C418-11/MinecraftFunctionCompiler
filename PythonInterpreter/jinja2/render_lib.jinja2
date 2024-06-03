@@ -1,0 +1,17 @@
+{% macro print_line(selector, color, jsontext) 
+%}tellraw {{selector}} {"text": "", "color": "{{color}}", "extra": [{{RAWJSON.Prefix}}, " ", {{jsontext}} ]}{%
+endmacro %}
+
+{% set translate = TextC.translate %}
+{% set run_command = TextC.clickEvent.run_command %}
+
+{% macro option(color, translate_key, fallback, click_event, hover_text) 
+%}{{print_line("@s", color, translate(translate_key, fallback, click_event=click_event, hover_event=TextC.hoverEvent.show_text(hover_text)))}}{%
+endmacro %}
+
+{% macro run_pyifunc(function_path, is_tag) %}{%
+if is_tag 
+%}{{run_command("function #python_interpreter:"+function_path)}}{%
+else
+%}{{run_command("function python_interpreter:"+function_path)}}{%
+endif %}{% endmacro %}

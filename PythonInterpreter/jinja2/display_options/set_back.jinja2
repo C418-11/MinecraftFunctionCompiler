@@ -1,0 +1,3 @@
+{% macro set_back(path2store)
+%}$data modify storage {{DS.EntityData}} player_data.$(player_uuid).{{path2store}} set value "$(father)"{%
+endmacro%}

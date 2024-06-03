@@ -5,12 +5,79 @@
 """
 import json
 import os
+from typing import Generator
 
 from Configuration import GlobalConfiguration
 from jinja2 import Environment
+from jinja2 import FileSystemLoader
 
 
-env = Environment()
+def _translate(translate: str, fallback: str = None, *, click_event: str = None, hover_event: str = None):
+    translate = f"python_interpreter.{translate}"
+
+    if fallback is None:
+        fallback = "§4§lTranslation missing: §e§o{}".format(translate)
+
+    data = {"type": "translatable", "translate": translate, "fallback": fallback}
+
+    if click_event is not None:
+        data["clickEvent"] = json.loads(click_event)
+
+    if hover_event is not None:
+        data["hoverEvent"] = json.loads(hover_event)
+
+    return json.dumps(data)
+
+
+def _nbt(source: str, nbt: str = "", *, storage: str = None, interpret: bool = None, click_event: str = None, hover_event: str = None):
+    data = {"type": "nbt", "nbt": nbt, "source": source}
+
+    if source == "storage":
+        if storage is None:
+            raise ValueError("storage is required when source is storage")
+        data["storage"] = storage
+
+    if interpret is not None:
+        data["interpret"] = interpret
+
+    if click_event is not None:
+        data["clickEvent"] = json.loads(click_event)
+
+    if hover_event is not None:
+        data["hoverEvent"] = json.loads(hover_event)
+
+    return json.dumps(data)
+
+
+def _run_command(command: str):
+    if not command.startswith("/"):
+        command = f"/{command}"
+    return json.dumps({"action": "run_command", "value": command})
+
+
+def _show_text(text: str):
+    raw_json = json.loads(text)
+    return json.dumps({"action": "show_text", "contents": raw_json})
+
+
+help_funcs = {
+    "TextC": {
+        "translate": _translate,
+        "nbt": _nbt,
+        "clickEvent": {
+            "run_command": _run_command,
+        },
+        "hoverEvent": {
+            "show_text": _show_text,
+        },
+    }
+}
+
+
+env = Environment(
+    loader=FileSystemLoader("PythonInterpreter/jinja2"),
+    trim_blocks=True,
+)
 
 
 def replace_placeholders(code: str, data: dict) -> str:
@@ -69,7 +136,7 @@ def get_relative_path(a: str, b: str) -> str:
         return relative_b
 
 
-def get_files(base_path: str, root_dir: str) -> str:
+def get_files(base_path: str, root_dir: str) -> Generator[tuple[str, str, str], None, None]:
     """
     获取指定目录下的所有文件路径的生成器
 
@@ -95,6 +162,7 @@ def main():
     read_path = r".\PythonInterpreter"
 
     placeholder_map = GlobalConfiguration().__placeholder__()
+    placeholder_map.update(help_funcs)
 
     for file_path, relative_path, file in get_files(r"", read_path):
 
@@ -104,6 +172,10 @@ def main():
 
         with open(file_path, encoding="UTF-8", mode='r') as f:
             code = f.read()
+
+        if file.lower().endswith(".mcfunction.jinja2"):
+            print("Renaming", file, "To", file[:-len(".jinja2")])
+            file = file[:-len(".jinja2")]
 
         ext = os.path.splitext(file)[1]
         if ext in file_extensions:

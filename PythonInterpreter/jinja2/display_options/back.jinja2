@@ -1,0 +1,15 @@
+{% from "call_lib.jinja2" import call_pyilib with context %}
+
+{% macro back(path2load)
+%}{{ call_pyilib("selector2uuid {selector:\"@s\"}") }}
+data modify storage {{DS.Temp}} display_options.back.player_uuid set from storage {{DS.Temp}} selector2uuid.result
+data remove storage {{DS.Temp}} selector2uuid.result
+
+{{ call_pyilib("player_data with storage "+DS.Temp+" display_options.back") }}
+data modify storage {{DS.Temp}} display_options.back.father.func set from storage {{DS.Temp}} player_data.result.{{path2load}}
+data remove storage {{DS.Temp}} player_data.result
+
+{{ call_pyilib("call_func with storage "+DS.Temp+" display_options.back.father") }}
+
+data remove storage {{DS.Temp}} display_options.back
+{% endmacro %}

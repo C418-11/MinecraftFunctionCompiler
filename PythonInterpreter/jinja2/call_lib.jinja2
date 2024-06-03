@@ -1,0 +1,12 @@
+{% macro call_pyilib(function_path)
+%}{{"function python_interpreter:lib/"+function_path}}{%
+endmacro %}
+
+{% macro call_pyifunc(function_path, is_tag) %}{%
+if is_tag 
+%}{{"function #python_interpreter:"+function_path}}{%
+else
+%}{{"function python_interpreter:"+function_path}}{%
+endif %}{% endmacro %}
+
+{% set void = "function python_interpreter:void" %}

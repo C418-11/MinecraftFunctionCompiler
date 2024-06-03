@@ -1,0 +1,21 @@
+{% from "render_lib.jinja2" import print_line, translate, option, run_pyifunc with context %}
+{% from "call_lib.jinja2" import call_pyilib with context %}
+
+
+{{print_line("@s", "green", translate("options.title", "======选项======", click_event=run_pyifunc("display_options/main_menu/back")))}}
+
+
+data modify storage {{DS.Temp}} display_options.main_menu.open_args set value {"father": "python_interpreter:display_options/main_menu/render"}
+
+{{ call_pyilib("selector2uuid {selector:\"@s\"}") }}
+data modify storage {{DS.Temp}} display_options.main_menu.open_args.player_uuid set from storage {{DS.Temp}} selector2uuid.result
+data remove storage {{DS.Temp}} selector2uuid.result
+
+{% set open_args = "with storage "+DS.Temp+" display_options.main_menu.open_args" %}
+
+{{option("dark_red","options.dangerous_options","[危险选项]", click_event=run_pyifunc("display_options/dangerous_options/open "+open_args, False), hover_text=translate("options.dangerous_options.hover","§4点击跳转"))}}
+{{option("green","options.details","[详细信息]",click_event=run_pyifunc("display_options/details/open "+open_args, Flase),hover_text=translate("options.details.hover","点击跳转详细信息"))}}
+{{option("green","options.details","[解释器配置]",click_event=run_pyifunc("display_options/config/open "+open_args, Flase),hover_text=translate("options.details.hover","点击跳转"))}}
+
+{{option("dark_purple","options.refresh_config","[刷新配置]",click_event=run_pyifunc("config/refresh",True),hover_text=translate("options.refresh_config.hover","点击以刷新解释器配置"))}}
+
