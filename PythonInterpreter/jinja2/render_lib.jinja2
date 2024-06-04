@@ -4,9 +4,19 @@ endmacro %}
 
 {% set translate = TextC.translate %}
 {% set run_command = TextC.clickEvent.run_command %}
+{% set suggest_command = TextC.clickEvent.suggest_command %}
+{% set show_text = TextC.hoverEvent.show_text %}
 
-{% macro option(color, translate_key, fallback, click_event, hover_text) 
-%}{{print_line("@s", color, translate(translate_key, fallback, click_event=click_event, hover_event=TextC.hoverEvent.show_text(hover_text)))}}{%
+{% macro translate_content(translate_key, fallback, click_event, hover_translate_key, hover_fallback) 
+%}{{translate(translate_key, fallback, click_event=click_event, hover_event=show_text(translate(hover_translate_key, hover_fallback)))}}{%
+endmacro %}
+
+{% macro option(color, translate_key, fallback, click_event, hover_translate_key, hover_fallback) 
+%}{{print_line("@s", color, translate_content(translate_key, fallback, click_event, hover_translate_key, hover_fallback))}}{%
+endmacro %}
+
+{% macro option_title(color, translate_key, fallback, click_run)
+%}{{print_line("@s", color, translate_content(translate_key, fallback, run_command(click_run), "options.back"))}}{%
 endmacro %}
 
 {% macro run_pyifunc(function_path, is_tag) %}{%
@@ -14,4 +24,11 @@ if is_tag
 %}{{run_command("function #python_interpreter:"+function_path)}}{%
 else
 %}{{run_command("function python_interpreter:"+function_path)}}{%
+endif %}{% endmacro %}
+
+{% macro suggest_pyifunc(function_path, is_tag) %}{%
+if is_tag 
+%}{{suggest_command("/function #python_interpreter:"+function_path)}}{%
+else
+%}{{suggest_command("/function python_interpreter:"+function_path)}}{%
 endif %}{% endmacro %}

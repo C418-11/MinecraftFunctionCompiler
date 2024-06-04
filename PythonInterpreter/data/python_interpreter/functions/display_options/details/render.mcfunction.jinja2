@@ -1,7 +1,10 @@
-{% from "render_lib.jinja2" import print_line, translate, option, run_command, run_pyifunc with context %}
+{% from "render_lib.jinja2" import option_title, option, run_command, run_pyifunc, suggest_command with context %}
+{% from "call_lib.jinja2" import call_pyifunc with context %}
 
-{{print_line("@s", "green", translate("options.details.title", "======详细信息======", click_event=run_pyifunc("display_options/details/back")))}}
+{{option_title("green", "options.details.title", "======详细信息======", call_pyifunc("display_options/details/back"))}}
 
 
-{{option("dark_red", "options.details.scb.state", "[SCB][State]", click_event=run_command("/scoreboard objectives setdisplay sidebar "+SB.State), hover_text=translate("options.details.scb.state.hover", "null"))}}
+{% set open_args = "{father: \"python_interpreter:display_options/details/render\"}" %}
 
+{{option("dark_red", "options.details.scb.state", "[SCB][State]", run_command("/scoreboard objectives setdisplay sidebar "+SB.State), "options.details.scb.state.hover")}}
+{{option("dark_red", "options.details.data_storage", "[Data Storage]", run_pyifunc("display_options/details/data_storage/open "+open_args), "options.details.data_storage.hover")}}

@@ -9,4 +9,4 @@ $data modify storage {{DS.Temp}} join_str.obj_to_join append string entity $(sel
 
 {{call_pyilib("join_str {split: \"_\"}")}}
 data modify storage {{DS.Temp}} selector2uuid.result set from storage {{DS.Temp}} join_str.result
-data remove storage {{DS.Temp}} join_str.result
+data remove storage {{DS.Temp}} join_str

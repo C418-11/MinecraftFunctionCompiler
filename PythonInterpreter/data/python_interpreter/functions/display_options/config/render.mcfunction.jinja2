@@ -1,7 +1,8 @@
-{% from "render_lib.jinja2" import print_line, translate, option, run_command, run_pyifunc with context %}
+{% from "render_lib.jinja2" import option_title, option, run_command with context %}
+{% from "call_lib.jinja2" import call_pyifunc with context %}
 
-{{print_line("@s", "green", translate("options.config.title", "======解释器配置======", click_event=run_pyifunc("display_options/config/back")))}}
+{{option_title("green", "options.config.title", "======解释器配置======", call_pyifunc("display_options/config/back"))}}
 
 
-{{option("dark_red", "options.config.scb", "[加载在计分板的配置]", click_event=run_command("/scoreboard objectives setdisplay sidebar "+SB.Config), hover_text=translate("options.details.config.scb.hover"))}}
-{{option("dark_red", "options.config.scb", "[解释器基础配置]", click_event=run_command("/tellraw @s "+TextC.nbt("storage", storage=DS.Config)), hover_text=translate("options.details.config.scb.hover"))}}
+{{option("dark_red", "options.config.scb_cache", "[计分板缓存]", run_command("/scoreboard objectives setdisplay sidebar "+SB.Config), "options.details.config.scb_cache.hover")}}
+{{option("dark_red", "options.config.pyi_config", "[解释器配置]", run_command("/tellraw @s "+TextC.nbt("storage", storage=DS.Config)), "options.details.config.pyi_config.hover")}}

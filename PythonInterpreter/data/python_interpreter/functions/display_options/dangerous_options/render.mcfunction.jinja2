@@ -1,7 +1,8 @@
-{% from "render_lib.jinja2" import print_line, translate, option, run_command, run_pyifunc with context %}
+{% from "render_lib.jinja2" import option_title, option, run_pyifunc, suggest_pyifunc with context %}
+{% from "call_lib.jinja2" import call_pyifunc with context %}
 
-{{print_line("@s", "green", translate("options.dangerous_options.title", "======危险选项======", click_event=run_pyifunc("display_options/dangerous_options/back")))}}
+{{option_title("green", "options.dangerous_options.title", "======危险选项======", call_pyifunc("display_options/dangerous_options/back"))}}
 
 
-{{option("dark_green", "options.dangerous_options.init_pyi", "[初始化]", click_event=run_pyifunc("init", True), hover_text=translate("options.dangerous_options.init_pyi.hover", "点击以初始化Python解释器"))}}
-{{option("dark_red", "options.dangerous_options.uninstall", "[卸载]", click_event=run_pyifunc("uninstall", True), hover_text=translate("options.dangerous_options.uninstall.hover", "点击以卸载Python解释器"))}}
+{{option("dark_green", "options.dangerous_options.init_pyi", "[初始化]", run_pyifunc("init", True), "options.dangerous_options.init_pyi.hover", "点击以初始化Python解释器")}}
+{{option("dark_red", "options.dangerous_options.uninstall", "[卸载]", suggest_pyifunc("uninstall", True), "options.dangerous_options.uninstall.hover", "点击以卸载Python解释器")}}

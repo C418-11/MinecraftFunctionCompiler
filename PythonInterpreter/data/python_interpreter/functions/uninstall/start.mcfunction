@@ -1,4 +1,7 @@
-data remove storage python_interpreter:flags Inited
+data remove storage {{DS.Flags}} Inited
+data remove storage {{DS.EntityData}} player_data
+data remove storage {{DS.Temp}} jinja2
+
 scoreboard objectives remove {{SB.State}}
 scoreboard objectives remove {{SB.Temp}}
 

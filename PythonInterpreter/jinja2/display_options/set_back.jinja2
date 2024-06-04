@@ -1,3 +1,6 @@
+{% from "call_lib.jinja2" import call_pyilib with context %}
+
 {% macro set_back(path2store)
-%}$data modify storage {{DS.EntityData}} player_data.$(player_uuid).{{path2store}} set value "$(father)"{%
+%}$data modify storage {{DS.Temp}} player_data.value set value "$(father)"
+${{ call_pyilib("player_data/setter {player_uuid: \"$(player_uuid)\", path: \""+path2store+"\"}") }}{%
 endmacro%}

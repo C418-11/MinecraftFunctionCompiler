@@ -1,11 +1,7 @@
 {% from "call_lib.jinja2" import call_pyifunc, call_pyilib with context %}
 
-data modify storage {{DS.Temp}} display_options.open_args set value {"father": "python_interpreter:void"}
+{#
+{{ call_pyifunc("display_options/main_menu/open {father: \"python_interpreter:void\"}") }}
+#}
 
-{{ call_pyilib("selector2uuid {selector:\"@s\"}") }}
-data modify storage {{DS.Temp}} display_options.open_args.player_uuid set from storage {{DS.Temp}} selector2uuid.result
-data remove storage {{DS.Temp}} selector2uuid.result
-
-{{ call_pyifunc("display_options/main_menu/open with storage "+DS.Temp+" display_options.open_args") }}
-
-data remove storage {{DS.Temp}} display_options.open_args
+{{ call_pyifunc("display_options/main_menu/open {father: \"python_interpreter:display_options/main_menu/render\"}") }}

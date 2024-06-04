@@ -8,43 +8,71 @@ import os
 from typing import Generator
 
 from Configuration import GlobalConfiguration
-from jinja2 import Environment
+from jinja2 import Environment, Undefined
 from jinja2 import FileSystemLoader
 
 
-def _translate(translate: str, fallback: str = None, *, click_event: str = None, hover_event: str = None):
+def _has_value(value) -> bool:
+    is_none = value is None
+    is_undefined = isinstance(value, Undefined)
+    return not (is_none or is_undefined)
+
+
+def _translate(
+        translate: str,
+        fallback: str = None,
+        *,
+        click_event: str = None,
+        hover_event: str = None,
+        color: str = None,
+):
     translate = f"python_interpreter.{translate}"
 
-    if fallback is None:
+    if not _has_value(fallback):
         fallback = "§4§lTranslation missing: §e§o{}".format(translate)
 
     data = {"type": "translatable", "translate": translate, "fallback": fallback}
 
-    if click_event is not None:
+    if _has_value(click_event):
         data["clickEvent"] = json.loads(click_event)
 
-    if hover_event is not None:
+    if _has_value(hover_event):
         data["hoverEvent"] = json.loads(hover_event)
+
+    if _has_value(color):
+        data["color"] = color
 
     return json.dumps(data)
 
 
-def _nbt(source: str, nbt: str = "", *, storage: str = None, interpret: bool = None, click_event: str = None, hover_event: str = None):
+def _nbt(
+        source: str,
+        nbt: str = "",
+        *,
+        storage: str = None,
+        interpret: bool = None,
+        click_event: str = None,
+        hover_event: str = None,
+        color: str = None,
+):
     data = {"type": "nbt", "nbt": nbt, "source": source}
 
     if source == "storage":
-        if storage is None:
+        if not _has_value(storage):
             raise ValueError("storage is required when source is storage")
         data["storage"] = storage
 
-    if interpret is not None:
+    if _has_value(interpret):
         data["interpret"] = interpret
 
-    if click_event is not None:
+    if _has_value(click_event):
         data["clickEvent"] = json.loads(click_event)
 
-    if hover_event is not None:
+    if _has_value(hover_event):
         data["hoverEvent"] = json.loads(hover_event)
+
+    if _has_value(color):
+        data["color"] = color
 
     return json.dumps(data)
 
@@ -53,6 +81,10 @@ def _run_command(command: str):
     if not command.startswith("/"):
         command = f"/{command}"
     return json.dumps({"action": "run_command", "value": command})
+
+
+def _suggest_command(command: str):
+    return json.dumps({"action": "suggest_command", "value": command})
 
 
 def _show_text(text: str):
@@ -66,6 +98,7 @@ help_funcs = {
         "nbt": _nbt,
         "clickEvent": {
             "run_command": _run_command,
+            "suggest_command": _suggest_command,
         },
         "hoverEvent": {
             "show_text": _show_text,
