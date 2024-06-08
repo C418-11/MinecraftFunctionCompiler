@@ -8,8 +8,5 @@
 {% set open_args = "{father: \"python_interpreter:display_options/main_menu/render\"}" %}
 
 {{option("dark_red","options.dangerous_options","[危险选项]", run_pyifunc("display_options/dangerous_options/open "+open_args, False), "options.dangerous_options.hover", "§4点击跳转")}}
-{{option("green","options.details","[详细信息]", run_pyifunc("display_options/details/open "+open_args, Flase), "options.details.hover", "点击跳转详细信息")}}
 {{option("green","options.config","[解释器配置]",run_pyifunc("display_options/config/open "+open_args, Flase), "options.config.hover", "点击跳转")}}
-
-{{option("dark_purple","options.refresh_config","[刷新配置]", run_pyifunc("config/refresh",True), "options.refresh_config.hover", "点击以刷新解释器配置")}}
-
+{{option("green","options.details","[详细信息]", run_pyifunc("display_options/details/open "+open_args, Flase), "options.details.hover", "点击跳转详细信息")}}

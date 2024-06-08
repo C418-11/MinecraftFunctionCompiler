@@ -87,8 +87,15 @@ def _suggest_command(command: str):
     return json.dumps({"action": "suggest_command", "value": command})
 
 
-def _show_text(text: str):
-    raw_json = json.loads(text)
+def _show_text(text: str | list):
+    if type(text) is str:
+        raw_json = json.loads(text)
+    elif type(text) is list:
+        raw_json = []
+        for t in text:
+            raw_json.append(json.loads(t))
+    else:
+        raise ValueError("text must be str or list")
     return json.dumps({"action": "show_text", "contents": raw_json})
 
 

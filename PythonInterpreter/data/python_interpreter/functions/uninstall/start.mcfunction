@@ -1,6 +1,7 @@
 data remove storage {{DS.Flags}} Inited
 data remove storage {{DS.EntityData}} player_data
 data remove storage {{DS.Temp}} jinja2
+data remove storage {{DS.Temp}} player_data
 
 scoreboard objectives remove {{SB.State}}
 scoreboard objectives remove {{SB.Temp}}
