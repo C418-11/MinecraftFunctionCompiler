@@ -5,6 +5,7 @@
 """
 import json
 import os
+import sys
 from typing import Generator
 
 from Configuration import GlobalConfiguration
@@ -18,20 +19,64 @@ def _has_value(value) -> bool:
     return not (is_none or is_undefined)
 
 
-def _translate(
-        translate: str,
-        fallback: str = None,
+translate_keys = {}
+
+
+def _text_component_style(
+        data: dict,
         *,
+        color: str = None,
+        font: str = None,
+        bold: str = None,
+        italic: bool = None,
+        underlined: bool = None,
+        strikethrough: bool = None,
+        obfuscated: bool = None,
+        insertion: str = None,
         click_event: str = None,
         hover_event: str = None,
-        color: str = None,
 ):
-    translate = f"python_interpreter.{translate}"
+    if _has_value(color):
+        # 检查合法性
+        if "#" in color:
+            if len(color) != 7:
+                raise ValueError(f"color \'{color}\' is invalid")
+            try:
+                int(color[1:], 16)
+            except ValueError:
+                raise ValueError(f"color \'{color}\' is invalid")
 
-    if not _has_value(fallback):
-        fallback = "§4§lTranslation missing: §e§o{}".format(translate)
+        default_colors = [
+            "black", "dark_blue", "dark_green", "dark_aqua", "dark_red",
+            "dark_purple", "gold", "gray", "dark_gray", "blue", "green",
+            "aqua", "red", "light_purple", "yellow", "white",
+        ]
 
-    data = {"type": "translatable", "translate": translate, "fallback": fallback}
+        if color not in default_colors:
+            raise ValueError(f"color \'{color}\' is invalid")
+
+        data["color"] = color
+
+    if _has_value(font):
+        data["font"] = font
+
+    if _has_value(bold):
+        data["bold"] = bold
+
+    if _has_value(italic):
+        data["italic"] = italic
+
+    if _has_value(underlined):
+        data["underlined"] = underlined
+
+    if _has_value(strikethrough):
+        data["strikethrough"] = strikethrough
+
+    if _has_value(obfuscated):
+        data["obfuscated"] = obfuscated
+
+    if _has_value(insertion):
+        data["insertion"] = insertion
 
     if _has_value(click_event):
         data["clickEvent"] = json.loads(click_event)
@@ -39,23 +84,78 @@ def _translate(
     if _has_value(hover_event):
         data["hoverEvent"] = json.loads(hover_event)
 
-    if _has_value(color):
-        data["color"] = color
+    return data
 
-    return json.dumps(data)
+
+def _translate(
+        translate: str,
+        fallback: str = None,
+        with_txt: str | list = None,
+        **kwargs,
+):
+    if not _has_value(translate):
+        print(f"\"{translate}\"")
+        raise ValueError("translate is required")
+
+    translate = f"python_interpreter.{translate}"
+
+    if not _has_value(fallback):
+        fallback = "§4§lTranslation missing: §e§o{}".format(translate)
+
+    if translate in translate_keys and translate_keys[translate] != fallback:
+        old_fallback = translate_keys[translate]
+        raise ValueError(f"translate \'{translate}\' has different fallback: {old_fallback} -> {fallback}")
+    elif translate not in translate_keys:
+        translate_keys[translate] = fallback
+
+    data = {"type": "translatable", "translate": translate, "fallback": fallback}
+
+    if _has_value(with_txt):
+        if type(with_txt) is str:
+            with_ls: list = json.loads(with_txt)
+            if type(with_ls) is not list:
+                raise ValueError("with_txt is invalid")
+        elif type(with_txt) is list:
+            with_ls = []
+            for t in with_txt:
+                with_ls.append(json.loads(t))
+        else:
+            raise ValueError("with_txt is invalid")
+
+        data["with"] = with_ls
+
+    data = _text_component_style(data, **kwargs)
+
+    return json.dumps(data, ensure_ascii=False)
 
 
 def _nbt(
         source: str,
         nbt: str = "",
         *,
+        block: str = None,
+        entity: str = None,
         storage: str = None,
         interpret: bool = None,
-        click_event: str = None,
-        hover_event: str = None,
-        color: str = None,
+        **kwargs,
 ):
     data = {"type": "nbt", "nbt": nbt, "source": source}
+
+    if not _has_value(source):
+        raise ValueError("source is required")
+
+    if source not in {"storage", "entity", "block"}:
+        raise ValueError(f"source \'{source}\' is invalid")
+
+    if source == "block":
+        if not _has_value(block):
+            raise ValueError("block is required when source is block")
+        data["block"] = block
+
+    if source == "entity":
+        if not _has_value(entity):
+            raise ValueError("entity is required when source is entity")
+        data["entity"] = entity
 
     if source == "storage":
         if not _has_value(storage):
@@ -65,29 +165,43 @@ def _nbt(
     if _has_value(interpret):
         data["interpret"] = interpret
 
-    if _has_value(click_event):
-        data["clickEvent"] = json.loads(click_event)
+    data = _text_component_style(data, **kwargs)
 
-    if _has_value(hover_event):
-        data["hoverEvent"] = json.loads(hover_event)
+    return json.dumps(data, ensure_ascii=False)
 
-    if _has_value(color):
-        data["color"] = color
+
+def _score(
+        name: str,
+        objective: str,
+        **kwargs,
+):
+    data = {"type": "score", "score": {"name": name, "objective": objective}}
+
+    data = _text_component_style(data, **kwargs)
 
     return json.dumps(data)
 
 
 def _run_command(command: str):
+    if not _has_value(command):
+        raise ValueError("command is required")
+
     if not command.startswith("/"):
         command = f"/{command}"
     return json.dumps({"action": "run_command", "value": command})
 
 
 def _suggest_command(command: str):
+    if not _has_value(command):
+        raise ValueError("command is required")
+
     return json.dumps({"action": "suggest_command", "value": command})
 
 
 def _show_text(text: str | list):
+    if not _has_value(text):
+        raise ValueError("text is required")
+
     if type(text) is str:
         raw_json = json.loads(text)
     elif type(text) is list:
@@ -103,6 +217,7 @@ help_funcs = {
     "TextC": {
         "translate": _translate,
         "nbt": _nbt,
+        "score": _score,
         "clickEvent": {
             "run_command": _run_command,
             "suggest_command": _suggest_command,
@@ -195,6 +310,11 @@ def get_files(base_path: str, root_dir: str) -> Generator[tuple[str, str, str], 
             yield os.path.normpath(os.path.join(root, file)), relative_path, file
 
 
+def _dump_translate_keys(file_obj):
+    import json
+    json.dump(translate_keys, file_obj, indent=4, ensure_ascii=False, sort_keys=True)
+
+
 def main():
     file_extensions = [".mcfunction", ".mcmeta"]
     save_path = r"D:\game\Minecraft\.minecraft\versions\1.20.6-MCFC\saves\函数\datapacks"
@@ -235,6 +355,9 @@ def main():
         print("-" * 50)
         print()
         print()
+
+    print()
+    _dump_translate_keys(sys.stdout)
 
 
 if __name__ == "__main__":

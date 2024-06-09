@@ -1,13 +1,13 @@
 {% from "render_lib.jinja2" import option_title, option, translate, run_command, suggest_command with context %}
 {% from "call_lib.jinja2" import call_pyifunc with context %}
 
-{{option_title("green", "options.details.title", "======Data Storage======", call_pyifunc("display_options/details/data_storage/back"))}}
+{{option_title("green", "options.details.data_storage.title", "======Data Storage======", call_pyifunc("display_options/details/data_storage/back"))}}
 
 
 {% set open_args = "{father: \"python_interpreter:display_options/details/data_storage/render\"}" %}
 
 {% macro flags_inited()
-%}/tellraw @s [{{translate("options.details.data_storage.flags.inited", "Inited:", color="yellow")}}," ",{{TextC.nbt("storage", "Inited", storage=DS.Flags, color="aqua")}}]{%
+%}/tellraw @s [{{translate("options.details.data_storage.flags.inited.content", "Inited:", color="yellow")}}," ",{{TextC.nbt("storage", "Inited", storage=DS.Flags, color="aqua")}}]{%
 endmacro %}
 
-{{option("dark_red", "options.details.data_storage", "[Flags] [Inited]", run_command(flags_inited()), "options.details.data_storage.hover")}}
+{{option("dark_red", "options.details.data_storage.flags.inited", "[Flags] [Inited]", run_command(flags_inited()), "options.details.data_storage.flags.inited.hover")}}

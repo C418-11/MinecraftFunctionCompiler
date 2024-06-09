@@ -1,15 +1,20 @@
 {% from "render_lib.jinja2" import option_title, option, run_command, run_pyifunc, suggest_command, show_text, translate with context %}
+{% from "render_lib.jinja2" import hover_storage_with_cache with context %}
 {% from "call_lib.jinja2" import call_pyifunc with context %}
 
 {{option_title("green", "options.config.title", "======解释器配置======", call_pyifunc("display_options/config/back"))}}
 
 
 {{option("dark_purple","options.refresh_config", "[刷新配置]", run_pyifunc("config/refresh",True), "options.refresh_config.hover", "点击以刷新解释器配置")}}
-{{option("dark_red", "options.config.scb_cache", "[计分板缓存]", run_command("/scoreboard objectives setdisplay sidebar "+SB.Config), "options.details.config.scb_cache.hover")}}
+{{option("dark_red", "options.config.scb_cache", "[显示计分板缓存]", run_command("/scoreboard objectives setdisplay sidebar "+SB.Config), "options.details.config.scb_cache.hover")}}
 
-{% macro hover_storage(storage, nbt_path)
-%}{{show_text([translate("options.hover_event.now_value", "(静态)当前值:", color="yellow"),"\" \"",TextC.nbt("storage", nbt_path, storage=storage, color="aqua")])}}{%
-endmacro %}
+{{
+option(
+    "blue",
+    "options.config.pyi_config",
+    "[StepPerCall]",
+    suggest_command("/data modify storage "+DS.Config+" StepPerCall set value "),
+    hover_event=hover_storage_with_cache(DS.Config, "StepPerCall", SB.Config, "StepPerCall")
+)
+}}
 
-
-{{option("blue", "options.config.pyi_config", "[StepPerCall]", suggest_command("/data modify storage "+DS.Config+" StepPerCall set value "), hover_event=hover_storage(DS.Config, "StepPerCall"))}}

@@ -13,7 +13,7 @@ endmacro %}
 
 {% macro option(color, translate_key, fallback, click_event, hover_translate_key, hover_fallback, hover_event) %}{%
 if hover_event
-%}{{print_line("@s", color, translate(transalte_key, fallback, click_event=click_event, hover_event=hover_event))}}{%
+%}{{print_line("@s", color, translate(translate_key, fallback, click_event=click_event, hover_event=hover_event))}}{%
 else
 %}{{print_line("@s", color, translate_content(translate_key, fallback, click_event, hover_translate_key, hover_fallback))}}{%
 endif %}{% endmacro %}
@@ -35,3 +35,24 @@ if is_tag
 else
 %}{{suggest_command("/function python_interpreter:"+function_path)}}{%
 endif %}{% endmacro %}
+
+{% macro hover_storage(storage, nbt_path)
+%}{{
+show_text([
+    translate("options.hover_event.now_value", "(静态)当前值: ", color="yellow"),
+    TextC.nbt("storage", nbt_path, storage=storage, color="aqua")
+])
+}}{%
+endmacro %}
+
+{% macro hover_storage_with_cache(storage, nbt_path, cache_name, cache_objective)
+%}{{
+show_text(translate(
+    "options.hover_event.value_with_cache","§e(静态)当前值: %s§r |-> §c计分板缓存: %s",
+    with_txt=[
+        TextC.nbt("storage", nbt_path, storage=storage, color="aqua"),
+        TextC.score(cache_objective, cache_name, color="aqua")
+    ]
+))
+}}{%
+endmacro %}
