@@ -4,6 +4,10 @@
 
 欢迎大佬参与开发
 
+
+# *正在大改，详见python-interpreter分支*
+
+
 ### [`API文档`(点击跳转)](https://minecraftfunctioncompiler.readthedocs.io/zh/latest/index.html)
 
 # *!!以下内容大部分已过时*
