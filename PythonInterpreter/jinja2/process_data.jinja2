@@ -1,0 +1,20 @@
+
+{% macro pd_get(pid, path, scale=1)
+%}data get storage {{DS.ProcessData}} {{pid}}.{{path}} {{scale}}{%
+endmacro%}
+
+{% macro pd_save(pid, save_target, save_path, path)
+%}data modify storage {{save_target}} {{save_path}} set from storage {{DS.ProcessData}} {{pid}}.{{path}}{%
+endmacro%}
+
+{% macro pd_setvalue(pid, path, value)
+%}data modify storage {{DS.ProcessData}} {{pid}}.{{path}} set value {{value}}{%
+endmacro%}
+
+{% macro pd_assign(pid, path, from_target, from_path)
+%}data modify storage {{DS.ProcessData}} {{pid}}.{{path}} set from storage {{from_target}} {{from_path}}{%
+endmacro%}
+
+{% macro pd_append(pid, path, from_target, from_path)
+%}data modify storage {{DS.ProcessData}} {{pid}}.{{path}} append from storage {{from_target}} {{from_path}}{%
+endmacro%}

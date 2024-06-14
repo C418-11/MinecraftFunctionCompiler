@@ -1,0 +1,6 @@
+{% from "call_lib.jinja2" import call_pyilib, call_pyifunc with context %}
+{% from "process_data.jinja2" import pd_setvalue with context %}
+
+# ${{pd_setvalue("$(pid)", )}}
+{{call_pyifunc("process/load")}}
+{{call_pyifunc("process/start")}}
