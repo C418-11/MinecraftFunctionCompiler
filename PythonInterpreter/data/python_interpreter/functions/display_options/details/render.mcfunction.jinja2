@@ -1,4 +1,5 @@
 {% from "render_lib.jinja2" import option_title, option, run_command, run_pyifunc, suggest_command with context %}
+{% from "render_lib.jinja2" import hover_storage with context %}
 {% from "call_lib.jinja2" import call_pyifunc with context %}
 
 {{option_title("green", "options.details.title", "======详细信息======", call_pyifunc("display_options/details/back"))}}
@@ -7,4 +8,13 @@
 {% set open_args = "{father: \"python_interpreter:display_options/details/render\"}" %}
 
 {{option("dark_red", "options.details.scb.state", "[SCB][State]", run_command("/scoreboard objectives setdisplay sidebar "+SB.State), "options.details.scb.state.hover")}}
-{{option("dark_red", "options.details.data_storage", "[Data Storage]", run_pyifunc("display_options/details/data_storage/open "+open_args), "options.details.data_storage.hover")}}
+
+{{
+option(
+    "dark_red",
+    "options.details.data_storage.flags.inited",
+    "[Flags] [Inited]",
+    suggest_command("/data modify storage "+DS.Flags+" Inited set value "),
+    hover_event=hover_storage(DS.Flags, "Inited")
+)
+}}

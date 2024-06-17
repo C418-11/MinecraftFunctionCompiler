@@ -317,8 +317,8 @@ def _dump_translate_keys(file_obj):
 
 def main():
     file_extensions = [".mcfunction", ".mcmeta"]
-    save_path = r"D:\game\Minecraft\.minecraft\versions\1.20.6-MCFC\saves\函数\datapacks"
-    # save_path = r".\.output"
+    # save_path = r"D:\game\Minecraft\.minecraft\versions\1.20.6-MCFC\saves\函数\datapacks"
+    save_path = r".\.output"
     read_path = r".\PythonInterpreter"
 
     placeholder_map = GlobalConfiguration().__placeholder__()
@@ -331,25 +331,42 @@ def main():
         print("Reading", file_path)
 
         with open(file_path, encoding="UTF-8", mode='r') as f:
-            code = f.read()
+            code: str = f.read()
 
-        if file.lower().endswith(".mcfunction.jinja2"):
-            print("Renaming", file, "To", file[:-len(".jinja2")])
-            file = file[:-len(".jinja2")]
+        save_file: bool = True
 
-        ext = os.path.splitext(file)[1]
+        if file.lower().endswith(".jinja2"):
+            real_ext = os.path.splitext(file[:-len(".jinja2")])[1]
+            if real_ext in file_extensions:
+                print("Renaming", file, "To", file[:-len(".jinja2")])
+                file = file[:-len(".jinja2")]
+            elif real_ext == '':
+                print("Plain template files have been ignored")
+                save_file = False
+            else:
+                print("No operation is performed because the file suffix is unknown", real_ext)
+
+        ext = os.path.splitext(file)[1].lower()
+        new_code: str = ''
+
         if ext in file_extensions:
             print("Processing", file_path)
             new_code = replace_placeholders(code, placeholder_map)
+        elif ext == ".disable":
+            print("Disabled", file_path)
+            save_file = False
         else:
             print("No Processing", file_path)
             new_code = code
 
-        print("Saving", file_path, "To", os.path.join(save_path, relative_path, file))
+        if save_file:
+            print("Saving", file_path, "To", os.path.join(save_path, relative_path, file))
 
-        os.makedirs(os.path.join(save_path, relative_path), exist_ok=True)
-        with open(os.path.join(save_path, relative_path, file), encoding="UTF-8", mode='w') as f:
-            f.write(new_code)
+            os.makedirs(os.path.join(save_path, relative_path), exist_ok=True)
+            with open(os.path.join(save_path, relative_path, file), encoding="UTF-8", mode='w') as f:
+                f.write(new_code)
+        else:
+            print("Skipping", file_path)
 
         print("Done.", file_path)
         print("-" * 50)
